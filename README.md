@@ -25,23 +25,23 @@ MVM 是一款运行在 Windows 10/11 x64 上的 macOS 应用包检查台。它�
 
 | 文件 | 用途 |
 |---|---|
-| [MVM Setup 0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM%20Setup%200.1.0.exe) | 推荐。按用户安装的 NSIS 安装程序，可选择目录，并可创建桌面和开始菜单快捷方式；不要求管理员权限。 |
-| [MVM 0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM%200.1.0.exe) | 便携版。无需安装，放在普通可写目录后直接运行；应用数据仍写入 Windows 用户数据目录。 |
+| [MVM-Setup-0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM-Setup-0.1.0.exe) | 推荐。按用户安装的 NSIS 安装程序，可选择目录，并可创建桌面和开始菜单快捷方式；不要求管理员权限。 |
+| [MVM-Portable-0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM-Portable-0.1.0.exe) | 便携版。无需安装，放在普通可写目录后直接运行；应用数据仍写入 Windows 用户数据目录。 |
 | [SHA256SUMS.txt](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/SHA256SUMS.txt) | v0.1.0 两个可执行文件的 SHA-256 校验值。 |
 
 当前 v0.1.0 构建尚未进行商业代码签名，Windows SmartScreen 可能显示“Windows 已保护你的电脑”或“未知发布者”。请先确认文件来自本仓库 Release，并在 PowerShell 中校验哈希：
 
 ```powershell
-Get-FileHash '.\MVM Setup 0.1.0.exe' -Algorithm SHA256
-Get-FileHash '.\MVM 0.1.0.exe' -Algorithm SHA256
+Get-FileHash '.\MVM-Setup-0.1.0.exe' -Algorithm SHA256
+Get-FileHash '.\MVM-Portable-0.1.0.exe' -Algorithm SHA256
 Get-Content '.\SHA256SUMS.txt'
 ```
 
 预期值：
 
 ```text
-AABE01623DB9A1AFAD8CED2B42757F809A5B7C46C86F0EA8FAE949C83C4C44EE  MVM 0.1.0.exe
-36E5910179487C50B5F76F3F0402D94B9AEFD733C33125638E5D6725E66E3140  MVM Setup 0.1.0.exe
+AABE01623DB9A1AFAD8CED2B42757F809A5B7C46C86F0EA8FAE949C83C4C44EE  MVM-Portable-0.1.0.exe
+36E5910179487C50B5F76F3F0402D94B9AEFD733C33125638E5D6725E66E3140  MVM-Setup-0.1.0.exe
 ```
 
 只有文件名、来源和哈希都匹配时，才应在 SmartScreen 中选择“更多信息 → 仍要运行”。如果哈希不一致，请删除文件并重新从 Release 下载，不要绕过提示。
@@ -191,23 +191,23 @@ Download MVM from the [latest Release page](https://github.com/Watertube-bilibil
 
 | File | Purpose |
 |---|---|
-| [MVM Setup 0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM%20Setup%200.1.0.exe) | Recommended. Per-user NSIS installer with a selectable directory and optional desktop/Start shortcuts; administrator rights are not required. |
-| [MVM 0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM%200.1.0.exe) | Portable build. Put it in a normal writable directory and run it without installing; application data still uses the Windows user-data directory. |
+| [MVM-Setup-0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM-Setup-0.1.0.exe) | Recommended. Per-user NSIS installer with a selectable directory and optional desktop/Start shortcuts; administrator rights are not required. |
+| [MVM-Portable-0.1.0.exe](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/MVM-Portable-0.1.0.exe) | Portable build. Put it in a normal writable directory and run it without installing; application data still uses the Windows user-data directory. |
 | [SHA256SUMS.txt](https://github.com/Watertube-bilibili/MVM/releases/download/v0.1.0/SHA256SUMS.txt) | SHA-256 checksums for both v0.1.0 executables. |
 
 The v0.1.0 binaries are not commercially code-signed, so Windows SmartScreen may show “Windows protected your PC” or an unknown-publisher warning. First confirm that the file came from this repository's Release and verify it in PowerShell:
 
 ```powershell
-Get-FileHash '.\MVM Setup 0.1.0.exe' -Algorithm SHA256
-Get-FileHash '.\MVM 0.1.0.exe' -Algorithm SHA256
+Get-FileHash '.\MVM-Setup-0.1.0.exe' -Algorithm SHA256
+Get-FileHash '.\MVM-Portable-0.1.0.exe' -Algorithm SHA256
 Get-Content '.\SHA256SUMS.txt'
 ```
 
 Expected values:
 
 ```text
-AABE01623DB9A1AFAD8CED2B42757F809A5B7C46C86F0EA8FAE949C83C4C44EE  MVM 0.1.0.exe
-36E5910179487C50B5F76F3F0402D94B9AEFD733C33125638E5D6725E66E3140  MVM Setup 0.1.0.exe
+AABE01623DB9A1AFAD8CED2B42757F809A5B7C46C86F0EA8FAE949C83C4C44EE  MVM-Portable-0.1.0.exe
+36E5910179487C50B5F76F3F0402D94B9AEFD733C33125638E5D6725E66E3140  MVM-Setup-0.1.0.exe
 ```
 
 Use SmartScreen's “More info → Run anyway” only when the filename, source, and hash all match. If a hash differs, delete the file and download it again from Releases; do not bypass the warning.
