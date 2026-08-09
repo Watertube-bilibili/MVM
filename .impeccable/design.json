@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-09T06:55:41Z",
+  "title": "Design System: MVM Compatibility Laboratory",
+  "extensions": {
+    "colorMeta": {
+      "shell-background": { "role": "neutral", "displayName": "Cool Shell", "canonical": "#e8eef0", "tonalRamp": ["oklch(15% 0.0070 219.6)", "oklch(27% 0.0070 219.6)", "oklch(39% 0.0070 219.6)", "oklch(51% 0.0070 219.6)", "oklch(63% 0.0070 219.6)", "oklch(75% 0.0070 219.6)", "oklch(87% 0.0070 219.6)", "oklch(95% 0.0070 219.6)"] },
+      "surface": { "role": "neutral", "displayName": "Cool Snow", "canonical": "#f7f9fa", "tonalRamp": ["oklch(15% 0.0025 228.8)", "oklch(27% 0.0025 228.8)", "oklch(39% 0.0025 228.8)", "oklch(51% 0.0025 228.8)", "oklch(63% 0.0025 228.8)", "oklch(75% 0.0025 228.8)", "oklch(87% 0.0025 228.8)", "oklch(95% 0.0025 228.8)"] },
+      "surface-raised": { "role": "neutral", "displayName": "Raised Snow", "canonical": "#fbfcfc", "tonalRamp": ["oklch(15% 0.0011 197.1)", "oklch(27% 0.0011 197.1)", "oklch(39% 0.0011 197.1)", "oklch(51% 0.0011 197.1)", "oklch(63% 0.0011 197.1)", "oklch(75% 0.0011 197.1)", "oklch(87% 0.0011 197.1)", "oklch(95% 0.0011 197.1)"] },
+      "surface-muted": { "role": "neutral", "displayName": "Muted Mist", "canonical": "#edf2f4", "tonalRamp": ["oklch(15% 0.0060 223.5)", "oklch(27% 0.0060 223.5)", "oklch(39% 0.0060 223.5)", "oklch(51% 0.0060 223.5)", "oklch(63% 0.0060 223.5)", "oklch(75% 0.0060 223.5)", "oklch(87% 0.0060 223.5)", "oklch(95% 0.0060 223.5)"] },
+      "surface-pressed": { "role": "neutral", "displayName": "Pressed Mist", "canonical": "#e2eaed", "tonalRamp": ["oklch(15% 0.0095 222.1)", "oklch(27% 0.0095 222.1)", "oklch(39% 0.0095 222.1)", "oklch(51% 0.0095 222.1)", "oklch(63% 0.0095 222.1)", "oklch(75% 0.0095 222.1)", "oklch(87% 0.0095 222.1)", "oklch(95% 0.0095 222.1)"] },
+      "line": { "role": "neutral", "displayName": "Mist Seam", "canonical": "#ccd7db", "tonalRamp": ["oklch(15% 0.0132 221.4)", "oklch(27% 0.0132 221.4)", "oklch(39% 0.0132 221.4)", "oklch(51% 0.0132 221.4)", "oklch(63% 0.0132 221.4)", "oklch(75% 0.0132 221.4)", "oklch(87% 0.0132 221.4)", "oklch(95% 0.0132 221.4)"] },
+      "line-strong": { "role": "neutral", "displayName": "Etched Seam", "canonical": "#aebfc5", "tonalRamp": ["oklch(15% 0.0206 220.9)", "oklch(27% 0.0206 220.9)", "oklch(39% 0.0206 220.9)", "oklch(51% 0.0206 220.9)", "oklch(63% 0.0206 220.9)", "oklch(75% 0.0206 220.9)", "oklch(87% 0.0206 220.9)", "oklch(95% 0.0206 220.9)"] },
+      "text": { "role": "neutral", "displayName": "Graphite", "canonical": "#172128", "tonalRamp": ["oklch(15% 0.0196 239.1)", "oklch(27% 0.0196 239.1)", "oklch(39% 0.0196 239.1)", "oklch(51% 0.0196 239.1)", "oklch(63% 0.0196 239.1)", "oklch(75% 0.0196 239.1)", "oklch(87% 0.0196 239.1)", "oklch(95% 0.0196 239.1)"] },
+      "text-muted": { "role": "neutral", "displayName": "Muted Graphite", "canonical": "#52636b", "tonalRamp": ["oklch(15% 0.0244 228.0)", "oklch(27% 0.0244 228.0)", "oklch(39% 0.0244 228.0)", "oklch(51% 0.0244 228.0)", "oklch(63% 0.0244 228.0)", "oklch(75% 0.0244 228.0)", "oklch(87% 0.0244 228.0)", "oklch(95% 0.0244 228.0)"] },
+      "text-subtle": { "role": "neutral", "displayName": "Subtle Graphite", "canonical": "#596b73", "tonalRamp": ["oklch(15% 0.0251 226.5)", "oklch(27% 0.0251 226.5)", "oklch(39% 0.0251 226.5)", "oklch(51% 0.0251 226.5)", "oklch(63% 0.0251 226.5)", "oklch(75% 0.0251 226.5)", "oklch(87% 0.0251 226.5)", "oklch(95% 0.0251 226.5)"] },
+      "accent": { "role": "primary", "displayName": "Laboratory Teal", "canonical": "#176b87", "tonalRamp": ["oklch(15% 0.0870 226.0)", "oklch(27% 0.0870 226.0)", "oklch(39% 0.0870 226.0)", "oklch(51% 0.0870 226.0)", "oklch(63% 0.0870 226.0)", "oklch(75% 0.0870 226.0)", "oklch(87% 0.0870 226.0)", "oklch(95% 0.0870 226.0)"] },
+      "accent-strong": { "role": "primary", "displayName": "Deep Laboratory Teal", "canonical": "#0e5b75", "tonalRamp": ["oklch(15% 0.0803 227.1)", "oklch(27% 0.0803 227.1)", "oklch(39% 0.0803 227.1)", "oklch(51% 0.0803 227.1)", "oklch(63% 0.0803 227.1)", "oklch(75% 0.0803 227.1)", "oklch(87% 0.0803 227.1)", "oklch(95% 0.0803 227.1)"] },
+      "accent-soft": { "role": "primary", "displayName": "Laboratory Teal Wash", "canonical": "#deedf1", "tonalRamp": ["oklch(15% 0.0169 215.5)", "oklch(27% 0.0169 215.5)", "oklch(39% 0.0169 215.5)", "oklch(51% 0.0169 215.5)", "oklch(63% 0.0169 215.5)", "oklch(75% 0.0169 215.5)", "oklch(87% 0.0169 215.5)", "oklch(95% 0.0169 215.5)"] },
+      "fluent-command": { "role": "primary", "displayName": "Fluent Command Blue", "canonical": "#0f6cbd", "tonalRamp": ["oklch(15% 0.1493 251.6)", "oklch(27% 0.1493 251.6)", "oklch(39% 0.1493 251.6)", "oklch(51% 0.1493 251.6)", "oklch(63% 0.1493 251.6)", "oklch(75% 0.1493 251.6)", "oklch(87% 0.1493 251.6)", "oklch(95% 0.1493 251.6)"] },
+      "fluent-command-hover": { "role": "primary", "displayName": "Fluent Command Hover", "canonical": "#115ea3", "tonalRamp": ["oklch(15% 0.1310 251.4)", "oklch(27% 0.1310 251.4)", "oklch(39% 0.1310 251.4)", "oklch(51% 0.1310 251.4)", "oklch(63% 0.1310 251.4)", "oklch(75% 0.1310 251.4)", "oklch(87% 0.1310 251.4)", "oklch(95% 0.1310 251.4)"] },
+      "fluent-command-pressed": { "role": "primary", "displayName": "Fluent Command Pressed", "canonical": "#0c3b5e", "tonalRamp": ["oklch(15% 0.0783 246.1)", "oklch(27% 0.0783 246.1)", "oklch(39% 0.0783 246.1)", "oklch(51% 0.0783 246.1)", "oklch(63% 0.0783 246.1)", "oklch(75% 0.0783 246.1)", "oklch(87% 0.0783 246.1)", "oklch(95% 0.0783 246.1)"] },
+      "on-accent": { "role": "neutral", "displayName": "On Accent White", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(95% 0 0)"] },
+      "warning": { "role": "secondary", "displayName": "Caution Umber", "canonical": "#7f4d0c", "tonalRamp": ["oklch(15% 0.0990 65.8)", "oklch(27% 0.0990 65.8)", "oklch(39% 0.0990 65.8)", "oklch(51% 0.0990 65.8)", "oklch(63% 0.0990 65.8)", "oklch(75% 0.0990 65.8)", "oklch(87% 0.0990 65.8)", "oklch(95% 0.0990 65.8)"] },
+      "warning-soft": { "role": "secondary", "displayName": "Caution Wash", "canonical": "#f7ead7", "tonalRamp": ["oklch(15% 0.0289 77.5)", "oklch(27% 0.0289 77.5)", "oklch(39% 0.0289 77.5)", "oklch(51% 0.0289 77.5)", "oklch(63% 0.0289 77.5)", "oklch(75% 0.0289 77.5)", "oklch(87% 0.0289 77.5)", "oklch(95% 0.0289 77.5)"] },
+      "danger": { "role": "secondary", "displayName": "Blocker Oxide", "canonical": "#a03b38", "tonalRamp": ["oklch(15% 0.1351 25.0)", "oklch(27% 0.1351 25.0)", "oklch(39% 0.1351 25.0)", "oklch(51% 0.1351 25.0)", "oklch(63% 0.1351 25.0)", "oklch(75% 0.1351 25.0)", "oklch(87% 0.1351 25.0)", "oklch(95% 0.1351 25.0)"] },
+      "danger-soft": { "role": "secondary", "displayName": "Blocker Wash", "canonical": "#f7e7e5", "tonalRamp": ["oklch(15% 0.0177 26.1)", "oklch(27% 0.0177 26.1)", "oklch(39% 0.0177 26.1)", "oklch(51% 0.0177 26.1)", "oklch(63% 0.0177 26.1)", "oklch(75% 0.0177 26.1)", "oklch(87% 0.0177 26.1)", "oklch(95% 0.0177 26.1)"] },
+      "success": { "role": "secondary", "displayName": "Evidence Green", "canonical": "#246b51", "tonalRamp": ["oklch(15% 0.0826 165.3)", "oklch(27% 0.0826 165.3)", "oklch(39% 0.0826 165.3)", "oklch(51% 0.0826 165.3)", "oklch(63% 0.0826 165.3)", "oklch(75% 0.0826 165.3)", "oklch(87% 0.0826 165.3)", "oklch(95% 0.0826 165.3)"] },
+      "success-soft": { "role": "secondary", "displayName": "Evidence Green Wash", "canonical": "#e1efe8", "tonalRamp": ["oklch(15% 0.0175 164.6)", "oklch(27% 0.0175 164.6)", "oklch(39% 0.0175 164.6)", "oklch(51% 0.0175 164.6)", "oklch(63% 0.0175 164.6)", "oklch(75% 0.0175 164.6)", "oklch(87% 0.0175 164.6)", "oklch(95% 0.0175 164.6)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Workbench Display", "purpose": "Empty-workbench invitation only." },
+      "headline": { "displayName": "Specimen Headline", "purpose": "Selected application identity." },
+      "title": { "displayName": "Panel Title", "purpose": "Panel and local section headings." },
+      "body": { "displayName": "Evidence Body", "purpose": "Findings, constraints, and explanatory evidence." },
+      "label": { "displayName": "Instrument Label", "purpose": "Runtime chips, statuses, and compact metadata." },
+      "mono": { "displayName": "Machine Evidence", "purpose": "Hashes, paths, architectures, timestamps, and evidence codes." },
+      "action-large": { "displayName": "Fluent Large Action", "purpose": "Primary import and experimental launch actions." }
+    },
+    "shadows": [
+      { "name": "specimen-low", "value": "0 8px 24px rgba(48, 76, 86, 0.08)", "purpose": "Package station and specimen-card separation." },
+      { "name": "drawer-mid", "value": "0 18px 48px rgba(48, 76, 86, 0.13)", "purpose": "Compact instrument drawer and drag overlay." },
+      { "name": "app-mark", "value": "0 6px 16px rgba(48, 76, 86, 0.15)", "purpose": "Main cube identity mark only." },
+      { "name": "runway-inset", "value": "inset 0 1px 0 rgba(255, 255, 255, 0.92)", "purpose": "Etched highlight on the inspection runway." }
+    ],
+    "motion": [
+      { "name": "fluent-faster", "value": "100ms cubic-bezier(0.33, 0, 0.67, 1)", "purpose": "Fluent button state transitions." },
+      { "name": "row-state", "value": "160ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Library rows and finding chevrons." },
+      { "name": "station-state", "value": "180ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Inspection-station selection and press feedback." },
+      { "name": "drawer-state", "value": "210ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Compact instrument drawer entrance and exit." },
+      { "name": "skeleton-scan", "value": "1.65s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Import progress only; disabled under reduced motion." },
+      { "name": "reduced-motion", "value": "0.01ms", "purpose": "Global transition and animation duration under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "instrument-drawer", "value": "1180px" },
+      { "name": "compact-runway", "value": "920px" },
+      { "name": "single-column", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Fluent large primary action for import or an evidence-enabled launch attempt.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 3v12m0-12 4 4m-4-4-4 4M5 13v6h14v-6\"/></svg><span>导入应用</span></button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:96px;padding:7px 16px;border:1px solid transparent;border-radius:4px;background:#0f6cbd;color:#fff;font:600 16px/22px 'Segoe UI',sans-serif;transition:background 100ms cubic-bezier(.33,0,.67,1),color 100ms cubic-bezier(.33,0,.67,1);cursor:pointer}.ds-btn-primary svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-btn-primary:hover{background:#115ea3}.ds-btn-primary:active{background:#0c3b5e}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#176b87);outline-offset:2px}"
+    },
+    {
+      "name": "Library Search",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Compact Fluent outline field for filtering the local application library.",
+      "html": "<label class=\"ds-search-field\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"6\"/><path d=\"m16 16 4 4\"/></svg><input class=\"ds-search-input\" type=\"search\" aria-label=\"搜索应用库\" placeholder=\"搜索应用\"></label>",
+      "css": ".ds-search-field{position:relative;display:inline-flex;align-items:center;gap:4px;min-height:32px;padding-left:10px;border:1px solid #d1d1d1;border-bottom-color:#616161;border-radius:4px;background:#fff;color:#616161;font:400 14px/20px 'Segoe UI',sans-serif}.ds-search-field:after{content:'';position:absolute;right:-1px;bottom:-1px;left:-1px;border-bottom:2px solid #0f6cbd;border-radius:0 0 4px 4px;transform:scaleX(0);transition:transform 200ms cubic-bezier(0,0,0,1)}.ds-search-field:hover{border-color:#c7c7c7}.ds-search-field:focus-within:after{transform:scaleX(1)}.ds-search-field svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}.ds-search-input{min-width:0;padding:0 12px 0 2px;border:0;outline:0;background:transparent;color:#242424;font:inherit}.ds-search-input:focus-visible{outline:none}"
+    },
+    {
+      "name": "Selected Library Item",
+      "kind": "card",
+      "description": "Selected listbox option with a mandatory structural-sample marker when the record is a fixture.",
+      "html": "<button class=\"ds-library-item\" type=\"button\" role=\"option\" aria-selected=\"true\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v18M4 7.5l8 4.5 8-4.5\"/></svg><span><strong>MVM Probe.app</strong><small>结构样本</small></span><em>结构样本</em></button>",
+      "css": ".ds-library-item{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;width:236px;min-height:62px;padding:10px;border:0;border-radius:10px;background:var(--accent-soft,#deedf1);color:var(--text,#172128);box-shadow:inset 2px 0 0 var(--accent,#176b87);text-align:left;transition:background 160ms cubic-bezier(.16,1,.3,1),transform 160ms cubic-bezier(.16,1,.3,1);cursor:pointer}.ds-library-item:hover{background:#d7e9ee}.ds-library-item:active{transform:translateY(1px)}.ds-library-item:focus-visible{outline:2px solid var(--accent,#176b87);outline-offset:2px}.ds-library-item>svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.5}.ds-library-item>span{display:grid;min-width:0;gap:3px}.ds-library-item strong{font:600 13px/1.3 'Segoe UI',sans-serif}.ds-library-item small{color:var(--text-muted,#52636b);font:400 11px/1.3 'Segoe UI',sans-serif}.ds-library-item em{grid-column:2;justify-self:start;padding:3px 7px;border-radius:999px;background:#d7e9ee;color:var(--accent-strong,#0e5b75);font:700 10px/1.2 'Segoe UI',sans-serif;font-style:normal}"
+    },
+    {
+      "name": "Darling Discovered Chip",
+      "kind": "chip",
+      "refersTo": "runtime-chip-discovered",
+      "description": "Discovery evidence only; never a backend-health or launch-success badge.",
+      "html": "<span class=\"ds-runtime-chip\">Darling 已发现</span>",
+      "css": ".ds-runtime-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--accent-soft,#deedf1);color:var(--accent-strong,#0e5b75);font:650 11px/1.3 'Segoe UI',sans-serif;white-space:nowrap}"
+    },
+    {
+      "name": "Selected Inspection Station",
+      "kind": "custom",
+      "refersTo": "station-selected",
+      "description": "Selected package station from the four-stage evidence tab system.",
+      "html": "<button class=\"ds-station\" type=\"button\" role=\"tab\" aria-selected=\"true\"><span class=\"ds-station-index\">1</span><span class=\"ds-station-label\">包</span><strong>APP</strong><small>输入、容器与 Bundle 证据</small></button>",
+      "css": ".ds-station{position:relative;display:grid;align-content:start;gap:6px;min-width:220px;min-height:210px;padding:54px 18px 22px;border:1px solid #b4c5ca;border-radius:12px;background:linear-gradient(145deg,#eef6f7,var(--accent-soft,#deedf1));color:var(--text,#172128);box-shadow:inset 0 -2px 0 var(--accent,#176b87),0 8px 24px rgba(48,76,86,.08);text-align:left;transition:background 180ms cubic-bezier(.16,1,.3,1),transform 180ms cubic-bezier(.16,1,.3,1);cursor:pointer}.ds-station:hover{background:#e3edf0}.ds-station:active{transform:translateY(1px)}.ds-station:focus-visible{outline:2px solid var(--accent,#176b87);outline-offset:2px}.ds-station-index{position:absolute;top:15px;left:18px;display:grid;width:30px;height:30px;place-items:center;border-radius:50%;background:var(--accent,#176b87);color:#f4f8f9;font:700 12px/1 'Segoe UI',sans-serif}.ds-station-label{color:var(--text-muted,#52636b);font:700 12px/1.3 'Segoe UI',sans-serif}.ds-station strong{font:700 16px/1.35 'Segoe UI',sans-serif}.ds-station small{color:var(--text-muted,#52636b);font:400 12px/1.45 'Segoe UI',sans-serif}"
+    }
+  ],
+  "narrative": {
+    "northStar": "兼容性实验台 / Compatibility Laboratory",
+    "overview": "Direction 4, seed `93f54be6`, is the approved world. The approved “Inspection Runway” comp is directional authority, and the implemented finish verdict is `ACCEPT / DELIVERABLE`. The durable idea is a cool, Windows-native instrument surface: a compact command bar, an application library, a four-station evidence runway, a findings bay, and a chronological evidence strip. Preserve the world and its mechanism, not the comp’s exact pixels.\n\nMVM is a Windows 10/11 x64 Electron desktop application for importing and statically inspecting macOS application packages, then exposing an experimental launch entry only when a real external backend and current evidence permit it. It is not a hosted website, a macOS emulator, a universal compatibility promise, or proof that a submitted process displayed a window or worked correctly. Product copy must keep analysis, eligibility, backend health, command submission, process creation, GUI appearance, and functional verification as separate conclusions.\n\nThe visual system is calm, engineering-led, and evidence-first: snow and mist surfaces, graphite text, etched seams, restrained teal-blue signals, specimen labels, small mono evidence, and familiar Fluent controls. Density is compact but not cramped. CSS geometry and vector icons carry the world; the approved raster comp remains a design reference and is never shipped as interface content.",
+    "keyCharacteristics": [
+      "Windows-first laboratory tooling, never macOS chrome or terminal cosplay.",
+      "One horizontal inspection story: package, architecture, frameworks, then backend.",
+      "Measured surfaces, thin seams, compact labels, and restrained depth instead of decorative cards.",
+      "Evidence states expressed with text, icon, structure, and color together.",
+      "No runtime raster imagery, Apple mark, third-party logo, or rasterized control/text."
+    ],
+    "rules": [
+      { "name": "The Product Truth Rule", "body": "Never compress static analysis, “candidate” eligibility, Darling discovery, health verification, command submission, process creation, window appearance, and functional success into one status.", "section": "overview" },
+      { "name": "The One Accent Voice Rule", "body": "Laboratory teal and Fluent command blue are two implementation channels of one restrained interaction voice; never place them in decorative competition.", "section": "colors" },
+      { "name": "The Evidence, Not Mood Rule", "body": "Warning, danger, and success colors may only describe a named evidence state, and the adjacent text/icon/structure must carry the same meaning without color.", "section": "colors" },
+      { "name": "The Plain Evidence Type Rule", "body": "Use Segoe for human interpretation and Cascadia Mono for exact machine evidence; never use mono as a terminal aesthetic or display face.", "section": "typography" },
+      { "name": "The Measurement Surface Rule", "body": "Preserve the advisory grids, ruler ticks, runway baseline, and etched connectors because MVM is a measurement surface for evidence; they provide scale and process continuity, but never encode status or become high-contrast decoration.", "section": "layout" },
+      { "name": "The Etched Before Elevated Rule", "body": "Establish hierarchy with tone, divider, and inset seam before adding a shadow.", "section": "elevation" },
+      { "name": "The Flat-by-Default Rule", "body": "Persistent panels remain flat; medium elevation is reserved for temporary layers that sit above the workspace.", "section": "elevation" },
+      { "name": "The Realized Radius Rule", "body": "Document and reuse rendered radii, not dormant declarations or a generic “rounded” preset.", "section": "shapes" },
+      { "name": "The Eligibility Is Not Execution Rule", "body": "“已发现” and `candidate` authorize only their named next check; neither is a health, launch, GUI, or compatibility success state.", "section": "components" },
+      { "name": "The Drawer Focus Rule", "body": "Every compact instrument drawer must trap focus while open, close on Escape, become inert when hidden, and restore focus to its trigger.", "section": "components" }
+    ],
+    "dos": [
+      "Do preserve direction 4, seed `93f54be6`, and the compatibility-laboratory mechanism when extending the application.",
+      "Do keep package, architecture, Framework, and backend evidence visibly separate and exportable.",
+      "Do preserve the advisory measurement grid and etched process cues at a quiet contrast.",
+      "Do label structural samples everywhere they can be mistaken for real applications.",
+      "Do pair status color with explicit Chinese text, a meaningful icon, and/or structural treatment.",
+      "Do use Fluent System vector icons or simple inline vectors and CSS geometry for the runtime interface.",
+      "Do maintain two-pixel visible focus, roving station tabs, modal drawer focus containment, reduced motion, and forced-colors behavior."
+    ],
+    "donts": [
+      "Don't present “Darling 已发现” as user-state health, launch success, GUI availability, or application compatibility.",
+      "Don't present `candidate`, command submission, or process creation as proof that an application is running correctly.",
+      "Don't use a structural sample as compatibility-rate evidence or disguise it as a real imported application.",
+      "Don't remove the measurement surface as “decoration” or inflate it into a high-contrast graph-paper theme.",
+      "Don't ship the approved raster comp, rasterized controls/text, an Apple logo, third-party marks, or photorealistic laboratory props in the interface.",
+      "Don't introduce macOS chrome, glass, purple gradients, neon, terminal treatment, decorative status dots, or a generic equal-card dashboard."
+    ]
+  }
+}

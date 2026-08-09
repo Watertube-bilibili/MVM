@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+release/
+coverage/
+*.tsbuildinfo
+
+# Local caches and logs
+.vite/
+.smoke/
+*.log
+npm-debug.log*
+
+# Local design exploration; keep only the portable design-system sidecar
+.impeccable/*
+!.impeccable/design.json
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
