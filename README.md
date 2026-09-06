@@ -1,8 +1,8 @@
 # MVM
 
-MVM 0.3.0 — an experimental macOS compatibility engine for Windows x64.
+MVM 0.3.1 — an experimental macOS compatibility engine for Windows x64.
 
-[简体中文](#简体中文) · [English](#english) · [Download v0.3.0](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.0)
+[简体中文](#简体中文) · [English](#english) · [Download v0.3.1](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.1)
 
 ## 简体中文
 
@@ -14,16 +14,16 @@ MVM 的目标是在 Windows 上拖入 Mac 应用并运行。0.3.0 默认使用�
 
 ### 下载和安装
 
-到 [v0.3.0 发布页](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.0) 下载：
+到 [v0.3.1 发布页](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.1) 下载：
 
 | 文件 | 用途 |
 |---|---|
-| MVM-Setup-0.3.0.exe | Windows x64 按用户安装程序，可选择安装目录 |
-| MVM-Portable-0.3.0.exe | 无需安装的便携启动程序；应用数据仍保存在用户数据目录 |
+| MVM-Setup-0.3.1.exe | Windows x64 按用户安装程序，可选择安装目录 |
+| MVM-Portable-0.3.1.exe | 无需安装的便携启动程序；应用数据仍保存在用户数据目录 |
 | MVM-Probe-0.3.0.zip | 可拖入 MVM 的同款测试应用及资源 |
 | SHA256SUMS.txt | 上述文件的校验值 |
 
-发布包未进行商业代码签名。请确认下载来源，并用 PowerShell 的 `Get-FileHash .\MVM-Setup-0.3.0.exe -Algorithm SHA256` 与发布页校验文件核对。不要运行来源不明的安装包。
+发布包未进行商业代码签名。请确认下载来源，并用 PowerShell 的 `Get-FileHash .\MVM-Setup-0.3.1.exe -Algorithm SHA256` 与发布页校验文件核对。不要运行来源不明的安装包。
 
 ### 选择运行方式
 
@@ -80,7 +80,7 @@ npm test
 
 ## English
 
-MVM aims to run Mac applications on Windows by dragging in an application package. Version 0.3.0 uses the original **MVM-CPU/2** engine: Mach-O loading, cached x86_64 instruction decoding, bounded IR interpretation, and a small Darwin / Objective-C host bridge. The default runtime needs no WSL, Darling, Linux VM, or administrator access.
+MVM aims to run Mac applications on Windows by dragging in an application package. Version 0.3.1 uses the original **MVM-CPU/2** engine: Mach-O loading, cached x86_64 instruction decoding, bounded IR interpretation, and a small Darwin / Objective-C host bridge. The default runtime needs no WSL, Darling, Linux VM, or administrator access.
 
 The included **MVM Probe** is compiled from C into a real macOS x86_64 executable. It runs functions and a loop, reads a resource from the Windows filesystem, and calls NSAlert through the host bridge. Continue closes the Windows dialog; the guest prints its completion message and returns the intentional test exit code **42**.
 
@@ -92,7 +92,7 @@ Choose **QEMU** or **自研引擎（不稳定）** (original engine, unstable). 
 
 ### Install and run
 
-1. Open the [v0.3.0 release](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.0). Download Setup for per-user installation, or Portable to run without installation. Verify the download against SHA256SUMS.txt. The executables are not commercially code-signed.
+1. Open the [v0.3.1 release](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.1). Download Setup for per-user installation, or Portable to run without installation. Verify the download against SHA256SUMS.txt. The executables are not commercially code-signed.
 2. Launch MVM and choose **加载默认测试应用** (Load default test app), or the cube button beside the library.
 3. The app imports and starts automatically. Wait for **MVM Probe - macOS application on Windows**, then select **Continue**.
 4. Check **程序输出** (Program output) for the resource text, **NSAlert host bridge completed.**, and exit code **42**.

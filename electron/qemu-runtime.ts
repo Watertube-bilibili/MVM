@@ -18,6 +18,11 @@ export interface QemuState { phase: 'offline'|'preparing'|'booting'|'ready'|'err
 export interface QemuRunResult { status: 'submitted'|'blocked'; message: string }
 export const shQuote = (text:string):string => "'"+text.replaceAll("'","'\\''")+"'";
 
+export function guestLaunchScript(bundle:string,executableName:string):string {
+  if(!bundle.startsWith('/Volumes/SystemRoot/home/mvm/inbox/')||!executableName||/[\\/\0\r\n]/.test(executableName)||executableName==='.'||executableName==='..')throw new Error('Invalid guest launch path.');
+  return `#!/bin/bash\nset -e\ncd -- ${shQuote(bundle)}\nexec ${shQuote('./Contents/MacOS/'+executableName)}\n`;
+}
+
 /** A stock Ubuntu guest is provisioned by cloud-init, not by a Windows Linux layer. */
 export function cloudConfig(publicKey:string):string {
   if (!/^ssh-ed25519 [A-Za-z0-9+/=]+(?: [^\r\n]*)?$/.test(publicKey.trim())) throw new Error('Invalid SSH public key.');
@@ -38,13 +43,15 @@ install -d /etc/lightdm/lightdm.conf.d
 printf '[Seat:*]\\nautologin-user=mvm\\nuser-session=openbox\\n' > /etc/lightdm/lightdm.conf.d/50-mvm.conf
 printf 'exec openbox-session\\n' > /home/mvm/.xsession
 chown mvm:mvm /home/mvm/.xsession
-systemctl enable --now lightdm
+systemctl enable lightdm
+systemctl restart lightdm
 touch /var/lib/mvm-darling-ready
 `;
-  return '#cloud-config\n'+JSON.stringify({hostname:'mvm-qemu',ssh_pwauth:false,disable_root:true,
+  const unit='[Unit]\nDescription=MVM Darling bootstrap\nWants=network-online.target\nAfter=network-online.target\nConditionPathExists=!/var/lib/mvm-darling-ready\nStartLimitIntervalSec=0\n\n[Service]\nType=oneshot\nExecStart=/bin/bash -c "/opt/mvm-bootstrap.sh >> /var/log/mvm-bootstrap.log 2>&1"\nRestart=on-failure\nRestartSec=60\nTimeoutStartSec=3600\n\n[Install]\nWantedBy=multi-user.target\n';
+  return '#cloud-config\n'+JSON.stringify({hostname:'mvm-qemu',ssh_pwauth:false,disable_root:true,ssh_deletekeys:false,
     users:[{name:'mvm',shell:'/bin/bash',lock_passwd:true,groups:['video','audio'],ssh_authorized_keys:[publicKey.trim()]}],
-    write_files:[{path:'/opt/mvm-bootstrap.sh',permissions:'0700',content:script}],
-    runcmd:[['bash','-c','/opt/mvm-bootstrap.sh > /var/log/mvm-bootstrap.log 2>&1']]
+    write_files:[{path:'/opt/mvm-bootstrap.sh',permissions:'0700',content:script},{path:'/etc/systemd/system/mvm-darling-bootstrap.service',permissions:'0644',content:unit}],
+    runcmd:[['systemctl','daemon-reload'],['systemctl','enable','--now','mvm-darling-bootstrap.service'],['systemctl','try-restart','lightdm']]
   },null,2)+'\n';
 }
 
@@ -99,12 +106,12 @@ export class QemuRuntime {
   }
   public async prepare(executable:string):Promise<QemuState>{
     if(this.busy||this.child)return this.status();
-    this.busy=true;this.abort=new AbortController();this.state={phase:'preparing',message:'核对 QEMU 和 Windows OpenSSH…',running:false};
+    this.busy=true;const abort=new AbortController();this.abort=abort;this.state={phase:'preparing',message:'核对 QEMU 和 Windows OpenSSH…',running:false};
     // Return promptly; the UI polls progress while downloads and guest boot continue.
-    void this.boot(executable).catch(error=>{this.state={...this.state,phase:'error',message:String(error)};if(!this.child)this.cleanup();}).finally(()=>{this.busy=false;});
+    void this.boot(executable,abort.signal).catch(error=>{this.state=abort.signal.aborted?{phase:'offline',message:'已取消准备。',running:false}:{...this.state,phase:'error',message:String(error)};if(!this.child)this.cleanup();}).finally(()=>{this.busy=false;});
     return this.status();
   }
-  private async boot(executable:string):Promise<void>{
+  private async boot(executable:string,signal:AbortSignal):Promise<void>{
     await mkdir(this.root,{recursive:true});
     if(!path.isAbsolute(executable)||path.basename(executable).toLowerCase()!=='qemu-system-x86_64.exe'||!(await stat(executable)).isFile())throw new Error('请选择标准 qemu-system-x86_64.exe。');
     const version=await this.command(executable,['--version']);
@@ -115,13 +122,13 @@ export class QemuRuntime {
     let hasDisk=false;try{hasDisk=(await stat(disk)).isFile();}catch{}
     if(!hasDisk){
       this.state.message='下载 Ubuntu 24.04 镜像（约 625 MB），并校验 SHA-256…';
-      const sums=await fetch(IMAGE_ROOT+'SHA256SUMS',{signal:AbortSignal.any([this.abort!.signal,AbortSignal.timeout(30000)])});
+      const sums=await fetch(IMAGE_ROOT+'SHA256SUMS',{signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
       if(!sums.ok)throw new Error('Cannot obtain official Ubuntu checksums.');
       const expected=(await sums.text()).split('\n').find(line=>line.trim().endsWith(' '+IMAGE_NAME)||line.trim().endsWith('*'+IMAGE_NAME))?.slice(0,64);
       if(!expected||!/^[a-f0-9]{64}$/.test(expected))throw new Error('Ubuntu checksum entry missing.');
       let cached=false;try{cached=(await sha256(image))===expected;}catch{}
       if(!cached){
-        const response=await fetch(IMAGE_ROOT+IMAGE_NAME,{signal:AbortSignal.any([this.abort!.signal,AbortSignal.timeout(30*60*1000)])});
+        const response=await fetch(IMAGE_ROOT+IMAGE_NAME,{signal:AbortSignal.any([signal,AbortSignal.timeout(30*60*1000)])});
         if(!response.ok||!response.body)throw new Error('Ubuntu image download failed.');
         let bytes=0;const stream=Readable.fromWeb(response.body as never);
         stream.on('data',(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>2*1024**3)stream.destroy(new Error('Image exceeds 2 GiB limit.'));this.state.message=`下载 Ubuntu 镜像：${Math.floor(bytes/1024**2)} MB`;});
@@ -133,16 +140,17 @@ export class QemuRuntime {
     }
     const identity=path.join(this.root,'identity');
     try{await stat(identity);}catch{await this.command(path.join(path.dirname(this.ssh),'ssh-keygen.exe'),['-t','ed25519','-N','','-f',identity]);}
-    this.abort!.signal.throwIfAborted();
+    signal.throwIfAborted();
     const userData=cloudConfig(await readFile(identity+'.pub','utf8'));
     const token=randomUUID();this.sshPort=await freePort();
     this.seed=createServer((req,res)=>{
       const endpoint=req.url;
-      const data=endpoint===`/${token}/user-data`?userData:endpoint===`/${token}/meta-data`?'instance-id: mvm-qemu-v1\nlocal-hostname: mvm-qemu\n':endpoint===`/${token}/vendor-data`?'':undefined;
+      const data=endpoint===`/${token}/user-data`?userData:endpoint===`/${token}/meta-data`?'instance-id: mvm-qemu-v2\nlocal-hostname: mvm-qemu\n':endpoint===`/${token}/vendor-data`?'':undefined;
       if(data===undefined){res.writeHead(404);res.end();return;}res.setHeader('Content-Type','text/plain');res.end(data);
     });
     await new Promise<void>((resolve,reject)=>{this.seed!.once('error',reject);this.seed!.listen(0,'127.0.0.1',()=>resolve());});
     const address=this.seed.address();if(!address||typeof address==='string')throw new Error('Seed server failed.');
+    signal.throwIfAborted();
     this.state={phase:'booting',message:'Ubuntu 正在启动并安装 Darling；首次启动可能需要 20–60 分钟。',running:true};
     const child=spawn(executable,qemuArguments(disk,this.sshPort,address.port,token,path.join(this.root,'serial.log')),{cwd:this.root,windowsHide:true,stdio:['pipe','pipe','pipe']});
     this.child=child;let errors='';
@@ -157,7 +165,7 @@ export class QemuRuntime {
     },10000);
   }
   private cleanup():void{if(this.poll)clearInterval(this.poll);this.seed?.close();this.seed=undefined;this.child=undefined;}
-  public powerDown():QemuState{if(!this.child){this.abort?.abort();this.state={phase:'offline',message:'已取消准备。',running:false};}else{this.child.stdin?.write('system_powerdown\n');this.state.message='已请求虚拟机正常关机，请等待关机完成。';}return this.status();}
+  public powerDown():QemuState{if(!this.child){this.abort?.abort();this.state={phase:this.busy?'preparing':'offline',message:this.busy?'正在取消准备，请等待当前步骤结束。':'虚拟机未运行。',running:false};}else{this.child.stdin?.write('system_powerdown\n');this.state.message='已请求虚拟机正常关机，请等待关机完成。';}return this.status();}
   public async run(bundle:string,executableName:string):Promise<QemuRunResult>{
     if(this.state.phase!=='ready')return {status:'blocked',message:'QEMU + Darling 尚未就绪，请先准备虚拟机。'};
     if(this.transferring)return {status:'blocked',message:'正在传送另一个应用，请稍后重试。'};
@@ -192,8 +200,8 @@ export class QemuRuntime {
     await this.guest('mkdir -p '+shQuote(folder));
     const args=this.sshArgs();args[0]='-P';
     await this.command(this.scp,[...args,archive,`mvm@127.0.0.1:${folder}/app.zip`],120000);
-    const guestExecutable='/Volumes/SystemRoot'+folder+'/'+path.basename(bundle)+'/Contents/MacOS/'+executableName;
-    await this.guest(`unzip -q ${shQuote(folder+'/app.zip')} -d ${shQuote(folder)} && chmod +x ${shQuote(folder+'/'+path.basename(bundle)+'/Contents/MacOS/'+executableName)} && (nohup env DISPLAY=:0 XAUTHORITY=/home/mvm/.Xauthority darling shell ${shQuote(guestExecutable)} > ${shQuote(folder+'/run.log')} 2>&1 < /dev/null &)`);
+    const launcher=Buffer.from(guestLaunchScript('/Volumes/SystemRoot'+folder+'/'+path.basename(bundle),executableName)).toString('base64');
+    await this.guest(`unzip -q ${shQuote(folder+'/app.zip')} -d ${shQuote(folder)} && chmod +x ${shQuote(folder+'/'+path.basename(bundle)+'/Contents/MacOS/'+executableName)} && printf %s ${shQuote(launcher)} | base64 -d > ${shQuote(folder+'/launch.sh')} && (nohup env DISPLAY=:0 XAUTHORITY=/home/mvm/.Xauthority darling shell /bin/bash ${shQuote('/Volumes/SystemRoot'+folder+'/launch.sh')} > ${shQuote(folder+'/run.log')} 2>&1 < /dev/null &)`);
     return {status:'submitted',message:`应用已交给 QEMU 内的 Darling；请在 QEMU 窗口查看。未确认应用成功运行。日志：${folder}/run.log`};
   }
 }
