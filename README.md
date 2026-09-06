@@ -25,6 +25,10 @@ MVM 的目标是在 Windows 上拖入 Mac 应用并运行。0.3.0 默认使用�
 
 发布包未进行商业代码签名。请确认下载来源，并用 PowerShell 的 `Get-FileHash .\MVM-Setup-0.3.0.exe -Algorithm SHA256` 与发布页校验文件核对。不要运行来源不明的安装包。
 
+### 选择运行方式
+
+主界面提供 **QEMU** 和 **自研引擎（不稳定）** 两个选项。自研引擎默认选中，可立即测试；QEMU 路线使用独立 Ubuntu + Darling，无需自备镜像，但需要先安装标准 QEMU。首次配置会下载系统并安装 guest 软件，整机路径尚未在开发电脑验证。详见 [QEMU 配置教程](docs/QEMU.md)。
+
 ### 第一次使用
 
 1. 启动 MVM，点击空页面的“加载默认测试应用”，或应用库旁的立方体按钮“创建默认测试应用”。
@@ -48,7 +52,7 @@ MVM 的目标是在 Windows 上拖入 Mac 应用并运行。0.3.0 默认使用�
 
 内容区支持 360px 起的六档实时布局，标题栏显示宽高、布局档位与缩放比例；窄窗口将诊断侧栏收为抽屉。0.3.0 去掉了应用卡片和工位的点击位移、加载区的循环扫光；相同尺寸不再触发状态更新，拖放使用嵌套计数避免高亮反复切换。尺寸数值采用与 CSS 一致的视口测量。
 
-Darling 向导保留为旧版可选实验入口，不属于默认运行链，也没有被移植到 Windows。无需使用它来测试 MVM-CPU/2。
+主界面已移除 Darling/WSL 安装入口，运行能力探测不再调用 WSL。仓库保留旧版后端代码用于历史回归，它不是运行依赖。
 
 ### 从源码构建
 
@@ -82,6 +86,10 @@ The included **MVM Probe** is compiled from C into a real macOS x86_64 executabl
 
 This is an experimental compatibility implementation, not a general CrossOver replacement or a native-code JIT. No third-party Mac application is certified compatible. Most full Cocoa apps need APIs and loader features that are not implemented.
 
+### Runtime selection
+
+Choose **QEMU** or **自研引擎（不稳定）** (original engine, unstable). The original engine is the default and can run the included test immediately. QEMU uses a managed Ubuntu + Darling guest, with automatic image download; standard Windows QEMU must be installed first. Full guest provisioning is not yet validated on the development machine. See [QEMU setup](docs/QEMU.md).
+
 ### Install and run
 
 1. Open the [v0.3.0 release](https://github.com/Watertube-bilibili/MVM/releases/tag/v0.3.0). Download Setup for per-user installation, or Portable to run without installation. Verify the download against SHA256SUMS.txt. The executables are not commercially code-signed.
@@ -99,7 +107,7 @@ Guest file access is read-only and restricted to the current .app directory. Rel
 
 The current bridge implements a small libc subset and selected NSString / NSAlert calls, not the full Foundation or AppKit frameworks. ARM64-only binaries, arbitrary guest dylibs, image initializers, chained fixups, full Objective-C metadata, Metal, XPC, DRM and general Cocoa applications remain unsupported. Unknown operations stop with a structured reason.
 
-Responsive layouts cover six width profiles starting at 360px. This release removes card/tab click displacement and the repeating loading sheen, avoids redundant viewport updates, and stabilizes nested drag highlighting. Darling remains a separate legacy option, not a Windows port or a requirement.
+Responsive layouts cover six width profiles starting at 360px. This release removes card/tab click displacement and the repeating loading sheen, avoids redundant viewport updates, and stabilizes nested drag highlighting. Darling/WSL installation controls have been removed from the UI, and runtime probing no longer invokes WSL. Historical backend code remains in the repository only.
 
 ### Build and contribute
 

@@ -14,7 +14,8 @@ MVM is a Windows x64 Electron application with an original experimental compatib
 | electron/compat-runtime/broker.ts, worker.ts | Production worker isolation, active deadline and GUI request/response |
 | electron/native-runtime/ | Reused strict Mach-O parser and file bridge; historical tiny interpreter retained for regression tests |
 | samples/MVMProbe/, resources/samples/ | First-party C source and compiled macOS default application |
-| electron/darling-installer.ts | Separate optional legacy Darling/WSL installation path |
+| electron/qemu-runtime.ts | Managed stock QEMU, Ubuntu image download, cloud-init Darling provisioning, SSH transfer and readiness checks; no WSL |
+| electron/darling-installer.ts | Historical backend implementation; no installation entry in the shipped UI |
 
 Default flow: input → bounded import → executable snapshot → Worker guest CPU → explicit host API → output/result. A guest NSAlert makes a round trip to the main process; it is not simulated by an unconditional success message.
 

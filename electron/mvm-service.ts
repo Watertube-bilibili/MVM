@@ -1274,6 +1274,13 @@ export class MvmService {
     return this.snapshot();
   }
 
+  public async qemuTarget(appId:string):Promise<{bundle:string;executableName:string}> {
+    const record=this.apps.find(item=>item.id===appId);
+    if(!record)throw new Error('应用记录不存在。');
+    const analysis=await this.nativeAnalyzer.analyze(record.bundlePath);
+    return {bundle:record.bundlePath,executableName:path.basename(analysis.executablePath)};
+  }
+
   public async prepareDarlingInstall(): Promise<DarlingInstallPlan> {
     return await this.darlingInstaller.preflight();
   }
@@ -1302,7 +1309,9 @@ export class MvmService {
 
   public async probeRuntime(persistEvent = true): Promise<RuntimeSnapshot> {
     const sevenZip = await this.probeSevenZip();
-    const { wsl, darling } = await this.probeWslAndDarling();
+    // The shipped runtime no longer probes or depends on a Linux backend.
+    const wsl = { available: false, label: 'WSL', detail: 'Not used by MVM-CPU/2.' };
+    const darling = { available: false, label: 'Darling', detail: 'Legacy backend disabled in the default workflow.' };
     this.runtime = {
       nativeTranslator: {
         available: NATIVE_RUNTIME_PROBE.available,
@@ -1326,7 +1335,7 @@ export class MvmService {
         nativeAvailable || darling.available ? "success" : "info",
         "运行能力已探测",
         nativeAvailable
-          ? `MVM-CPU/2 Windows 兼容引擎已就绪，无需 WSL；Darling ${darling.available ? "已发现，可作为可选回退" : "未发现，不影响原生路径"}。`
+          ? 'MVM-CPU/2 自研兼容引擎已就绪，不依赖 WSL、Darling 或虚拟机。'
           : darling.available
             ? "MVM 兼容引擎不可用；Darling 命令已发现，可作为实验回退。"
             : "当前没有可用运行后端。",
@@ -1348,65 +1357,6 @@ export class MvmService {
     } catch {
       this.sevenZip = undefined;
       return { available: false, label: "7-Zip", detail: "未找到支持全部目标格式的完整构建" };
-    }
-  }
-
-  private async probeWslAndDarling(): Promise<{ readonly wsl: ToolProbe; readonly darling: ToolProbe }> {
-    const wslPath = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "wsl.exe");
-    try {
-      const wslStats = await stat(wslPath);
-      if (!wslStats.isFile()) throw new Error("wsl.exe is not a file");
-      const distributions = await runProcess(wslPath, ["--list", "--verbose"], {
-        cwd: this.userDataPath,
-        timeoutMs: 10_000,
-        maxStdoutBytes: 1024 * 1024,
-      });
-      const names = parseWsl2Distributions(decodeWindowsOutput(distributions.stdout));
-      if (distributions.exitCode !== 0 || names.length === 0) {
-        this.darlingDistribution = undefined;
-        return {
-          wsl: { available: false, label: "WSL 2", detail: "没有已确认 VERSION=2 的 Linux 发行版" },
-          darling: { available: false, label: "Darling", detail: "需要 WSL 2 Linux 发行版" },
-        };
-      }
-      const managedDistributionAvailable = names.some((name) => name.toLowerCase() === DARLING_DISTRIBUTION.toLowerCase())
-        && await this.darlingInstaller.isManagedDistributionUsable();
-      const distribution = managedDistributionAvailable
-        ? DARLING_DISTRIBUTION
-        : names.find((name) => name.toLowerCase().includes("ubuntu")) ?? names[0]!;
-      const managedArgs = distribution === DARLING_DISTRIBUTION ? ["--user", "mvm"] : [];
-      const discoveryScript = distribution === DARLING_DISTRIBUTION
-        ? `export DPREFIX=${DARLING_PREFIX}; command -v darling >/dev/null 2>&1 || exit 3; darling --version 2>&1 | head -n 1`
-        : "command -v darling >/dev/null 2>&1 || exit 3; darling --version 2>&1 | head -n 1";
-      const darlingResult = await runProcess(
-        wslPath,
-        [
-          "--distribution",
-          distribution,
-          ...managedArgs,
-          "--exec",
-          "sh",
-          "-c",
-          discoveryScript,
-        ],
-        { cwd: this.userDataPath, timeoutMs: 15_000, maxStdoutBytes: 1024 * 1024 },
-      );
-      const darlingOutput = decodeWindowsOutput(Buffer.concat([darlingResult.stdout, darlingResult.stderr]));
-      const darlingLines = darlingOutput.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
-      const darlingAvailable = darlingResult.exitCode === 0 && darlingLines.length > 0;
-      this.darlingDistribution = darlingAvailable ? distribution : undefined;
-      return {
-        wsl: { available: true, label: "WSL 2", detail: distribution === DARLING_DISTRIBUTION ? `${distribution} · VERSION 2 · MVM 专用` : `${distribution} · VERSION 2` },
-        darling: darlingAvailable
-          ? { available: true, label: "Darling", detail: "命令已发现；启动时验证用户态", ...(darlingLines[0] ? { version: darlingLines[0] } : {}) }
-          : { available: false, label: "Darling", detail: darlingResult.exitCode === 3 ? `${distribution} 中未安装 Darling` : "Darling 版本探测失败" },
-      };
-    } catch {
-      this.darlingDistribution = undefined;
-      return {
-        wsl: { available: false, label: "WSL 2", detail: "未找到可用 WSL 2 环境" },
-        darling: { available: false, label: "Darling", detail: "未连接实验后端" },
-      };
     }
   }
 

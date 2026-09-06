@@ -35,3 +35,5 @@ Record visual tests separately from mocked callbacks. If desktop capture/activat
 ## Release
 
 Run tests, typecheck and build; package Setup and Portable. Include the default app ZIP and SHA256SUMS.txt. Verify packaged resources and licenses. Commit source, tag a prerelease, upload artifacts and confirm remote asset sizes/hashes. Never publish .smoke/ state, credentials, user bundles or proprietary Apple files.
+
+QEMU configuration tests cover loopback forwarding, cloud-init and integrity checks, quoting, and blocked submission before readiness. They do not boot a VM or validate Darling installation; see [QEMU verification status](QEMU.md).

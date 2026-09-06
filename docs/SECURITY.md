@@ -22,6 +22,10 @@ Managed resource extraction is limited to 2,048 additional files, 512 MiB total 
 
 Library records, managed imports, fixtures and events are stored in the Windows user's MVM data directory. Removing a library record does not remove the user's original input; MVM-owned copies may be removed. Exported reports/events can contain local paths, app metadata and snippets of program output: review them before sharing.
 
-The default runtime has no dependency on WSL/Darling, no telemetry pipeline and no need to upload application files. The optional Darling installer is a separate explicit network/system-changing workflow with its own confirmation; it is not run by importing an app. Consult the installer source before using that experimental feature.
+The default runtime has no dependency on WSL/Darling, no telemetry pipeline and no need to upload application files. Historical Darling installer code remains for regression coverage, but its UI entry is removed and normal runtime probing does not call WSL.
 
 No Apple SDK, system Framework, Rosetta or DRM bypass is distributed. Open-source desktop and archive dependencies are listed in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). Release binaries are not commercially signed.
+
+## Optional QEMU runtime
+
+QEMU setup explicitly downloads Ubuntu and installs Linux software inside a managed guest. It uses a sparse disk overlay, stock TCG, a localhost cloud-init seed service, localhost SSH forwarding and dedicated key files. Image checksums come from Canonical over HTTPS; Darling uses a pinned archive hash. The Linux guest has network access. Host-to-guest app transfers use bounded read-only snapshots rather than whole-drive mounts. QEMU and SSH are external prerequisites. This pathway is not yet end-to-end verified; see [QEMU](QEMU.md).

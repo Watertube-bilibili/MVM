@@ -26,6 +26,11 @@ const IPC = Object.freeze({
 });
 
 const desktopApi: MvmDesktopApi = {
+  qemuStatus: async () => await ipcRenderer.invoke('mvm:qemu-status'),
+  prepareQemu: async () => await ipcRenderer.invoke('mvm:qemu-prepare'),
+  stopQemu: async () => await ipcRenderer.invoke('mvm:qemu-stop'),
+  runQemu: async (appId) => await ipcRenderer.invoke('mvm:qemu-run',appId),
+  downloadQemu: async () => await ipcRenderer.invoke('mvm:qemu-download'),
   getSnapshot: async () => await ipcRenderer.invoke(IPC.getSnapshot),
   chooseInput: async (kind) => await ipcRenderer.invoke(IPC.chooseInput, kind),
   pathForFile: (file) => webUtils.getPathForFile(file),

@@ -1,12 +1,5 @@
 import {
   Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   FluentProvider,
   Input,
   Menu,
@@ -21,7 +14,6 @@ import {
 import {
   Apps24Regular,
   Archive24Regular,
-  ArrowDownload24Regular,
   ArrowClockwise24Regular,
   ArrowUpload24Regular,
   Box24Regular,
@@ -51,12 +43,11 @@ import {
   formatArchitectureLabel,
   getDesktopApi,
   type AppFinding,
-  type DarlingInstallPlan,
-  type DarlingInstallProgress,
   type DesktopSnapshot,
   type ImportProgress,
   type MvmAppRecord,
   type NativeAppRunResult,
+  type QemuState,
   type RuntimeSnapshot,
 } from "./mvm-api";
 import { getViewportMetrics, type ViewportMetrics } from "./viewport";
@@ -321,7 +312,7 @@ function EmptyWorkbench({
       </div>
       <div className="empty-copy">
         <h2 id="empty-title">把 Mac 应用放到原生直译台</h2>
-        <p>拖入 DMG、PKG、ZIP，或选择一个 .app 文件夹。MVM 会在载入后立即尝试 Windows 兼容引擎，无需 WSL；PKG 安装脚本仍不会执行。</p>
+        <p>拖入 DMG、PKG、ZIP，或选择一个 .app 文件夹。MVM 会按所选运行方式尝试启动，无需 WSL；PKG 安装脚本仍不会执行。</p>
         <div className="empty-actions">
           <Button appearance="primary" size="large" icon={<ArrowUpload24Regular />} onClick={onImportPackage}>
             载入安装包并直译
@@ -425,7 +416,7 @@ function StageDetail({
       </div>
       <p>{nativeTranslator.available
         ? "MVM 会直接在 Windows 进程内解析 x86_64 Mach-O，并把已支持指令转成受限微指令执行。入口返回不代表窗口出现、图形界面可用或完整应用兼容。"
-        : `原生转译器尚未就绪。${runtime.darling.available ? "已发现的 Darling 只作为可选回退。" : "Darling/WSL 可选回退不会阻塞原生路径。"}`}</p>
+        : "自研引擎尚未就绪，请检查 Windows x64 环境。"}</p>
     </div>
   );
 }
@@ -567,187 +558,6 @@ function InspectionWorkbench({
   );
 }
 
-const TERMINAL_INSTALL_PHASES = new Set<DarlingInstallProgress["phase"]>([
-  "ready",
-  "ready-cli-only",
-  "canceled",
-  "failed",
-]);
-
-function installProgressMessage(progress: DarlingInstallProgress): string {
-  switch (progress.phase) {
-    case "ready":
-      return "Darling CLI 与 WSLg 通道均已验证；GUI 应用仍属实验兼容。";
-    case "ready-cli-only":
-      return "Darling CLI 已验证，但没有检测到 WSLg 图形通道。";
-    case "failed":
-      return "安装没有被标记为就绪。请查看下方日志后重试。";
-    case "canceled":
-      return "安装已在安全步骤边界停止；已完成的专用发行版内容会保留以便恢复。";
-    case "canceling":
-      return "取消请求已记录。MVM 会在当前不可强杀步骤完成后停止，不会破坏 WSL 注册或 APT 状态。";
-    case "creating-distro":
-      return "WSL 正在注册专用发行版；若请求取消，会先完成注册并写入 MVM 所有权标记。";
-    case "installing-packages":
-    case "configuring-user":
-      return "软件包和系统配置步骤会完整结束后再响应取消，避免留下损坏的 dpkg/用户状态。";
-    case "smoke-testing":
-      return "正在以无 sudo 的 mvm 用户验证独立 Prefix；这里不代表任意 Mac 应用都兼容。";
-    default:
-      return "请保持 MVM 运行；下载、校验和展开可安全取消，已验证缓存可用于后续恢复。";
-  }
-}
-
-function byteLabel(bytes: number): string {
-  return new Intl.NumberFormat("zh-CN", {
-    style: "unit",
-    unit: "megabyte",
-    unitDisplay: "short",
-    maximumFractionDigits: 1,
-  }).format(bytes / 1_048_576);
-}
-
-function DarlingInstallWizard({
-  open,
-  preparing,
-  starting,
-  acceptedRisk,
-  plan,
-  progress,
-  logs,
-  onAcceptedRisk,
-  onStart,
-  onCancel,
-  onClose,
-}: {
-  readonly open: boolean;
-  readonly preparing: boolean;
-  readonly starting: boolean;
-  readonly acceptedRisk: boolean;
-  readonly plan: DarlingInstallPlan | null;
-  readonly progress: DarlingInstallProgress | null;
-  readonly logs: readonly string[];
-  readonly onAcceptedRisk: (accepted: boolean) => void;
-  readonly onStart: () => void;
-  readonly onCancel: () => void;
-  readonly onClose: () => void;
-}) {
-  const busy = progress !== null && !TERMINAL_INSTALL_PHASES.has(progress.phase);
-  const terminal = progress !== null && TERMINAL_INSTALL_PHASES.has(progress.phase);
-  const preventDismiss = preparing || starting || busy;
-
-  return (
-    <Dialog
-      open={open}
-      modalType="modal"
-      onOpenChange={(_, data) => {
-        if (!data.open && !preventDismiss) onClose();
-      }}
-    >
-      <DialogSurface className="darling-installer-surface">
-        <DialogBody className="darling-installer-body">
-          <DialogTitle>安装实验运行后端</DialogTitle>
-          <DialogContent className="darling-installer-content">
-            {preparing ? (
-              <div className="installer-preparing" aria-busy="true">
-                <ProgressBar />
-                <strong>正在检查 WSL 与专用发行版能力</strong>
-                <span>确认前不会写入、安装或修改任何 Linux 发行版；检查现有专用发行版时可能短暂启动它。</span>
-              </div>
-            ) : progress ? (
-              <div className="installer-progress" aria-live="polite" aria-busy={busy}>
-                <div className="installer-progress-heading">
-                  <div>
-                    <strong>{progress.label}</strong>
-                    <span>{progress.detail ?? "正在按固定清单执行"}</span>
-                  </div>
-                  <b>{Math.round(progress.progress * 100)}%</b>
-                </div>
-                <ProgressBar value={progress.progress} thickness="large" />
-                {progress.downloadedBytes !== undefined && progress.totalBytes !== undefined ? (
-                  <p className="installer-transfer">{byteLabel(progress.downloadedBytes)} / {byteLabel(progress.totalBytes)}</p>
-                ) : null}
-                <div className={`installer-state installer-state--${progress.phase}`}>
-                  <ShieldCheckmark24Regular aria-hidden />
-                  <span>{installProgressMessage(progress)}</span>
-                </div>
-                <div className="installer-log" role="log" aria-label="Darling 安装日志">
-                  {logs.length > 0
-                    ? logs.map((line, index) => <code key={`${index}-${line}`}>{line}</code>)
-                    : <span>等待第一条安装日志…</span>}
-                </div>
-              </div>
-            ) : plan ? (
-              <div className="installer-plan">
-                <div className="installer-truth">
-                  <div>
-                    <strong>专用 MVM-Darling</strong>
-                    <span>Ubuntu 24.04 · WSL 2 · x86_64</span>
-                  </div>
-                  <span className={plan.canInstall ? "install-eligibility is-ready" : "install-eligibility"}>
-                    {plan.canInstall ? "可以安装" : "需要处理"}
-                  </span>
-                </div>
-
-                <dl className="installer-spec">
-                  <div><dt>固定版本</dt><dd>{plan.releaseTag}</dd></div>
-                  <div><dt>包版本</dt><dd>{plan.packageVersion}</dd></div>
-                  <div><dt>来源</dt><dd title={plan.assetUrl}>github.com/darlinghq/darling</dd></div>
-                  <div><dt>官方下载</dt><dd>{byteLabel(plan.assetBytes)}</dd></div>
-                  <div className="installer-hash"><dt>SHA-256</dt><dd title={plan.assetSha256}>{plan.assetSha256}</dd></div>
-                </dl>
-
-                {plan.blockers.length > 0 ? (
-                  <div className="installer-blockers" role="alert">
-                    <strong>当前不能自动安装</strong>
-                    {plan.blockers.map((blocker) => <p key={blocker}>{blocker}</p>)}
-                  </div>
-                ) : null}
-
-                <ol className="installer-steps">
-                  {plan.steps.map((step) => <li key={step}>{step}</li>)}
-                </ol>
-
-                <div className="installer-warning">
-                  <Warning24Regular aria-hidden />
-                  <div>
-                    <strong>安装成功不等于 Mac 应用一定能运行</strong>
-                    <p>官方 Debian 打包仍属实验；复杂 AppKit、Metal、WebKit 与 Apple 服务兼容性不能保证。</p>
-                    {plan.warnings.map((warning) => <p key={warning}>{warning}</p>)}
-                  </div>
-                </div>
-
-                {plan.canInstall ? (
-                  <Checkbox
-                    checked={acceptedRisk}
-                    onChange={(_, data) => onAcceptedRisk(data.checked === true)}
-                    label="我同意创建专用 WSL2 发行版，并在其中以 Linux root 安装上述固定官方包。"
-                  />
-                ) : null}
-              </div>
-            ) : (
-              <div className="installer-blockers" role="alert">无法生成安装计划，请关闭后重试。</div>
-            )}
-          </DialogContent>
-          <DialogActions className="darling-installer-actions">
-            {busy ? (
-              <Button appearance="secondary" disabled={!progress.canCancel} onClick={onCancel}>
-                {progress.canCancel ? "取消安装" : "完成当前步骤后停止"}
-              </Button>
-            ) : null}
-            {!progress && plan?.canInstall ? (
-              <Button appearance="primary" icon={<ArrowDownload24Regular />} disabled={!acceptedRisk || starting} onClick={onStart}>
-                {starting ? "正在启动安装…" : "一键安装 Darling"}
-              </Button>
-            ) : null}
-            {!preventDismiss || terminal ? <Button appearance="secondary" onClick={onClose}>关闭</Button> : null}
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
 function InstrumentBay({
   app,
   runtime,
@@ -756,7 +566,6 @@ function InstrumentBay({
   compact,
   open,
   onProbe,
-  onInstallDarling,
   onLaunch,
   onClose,
   returnFocusId,
@@ -769,7 +578,6 @@ function InstrumentBay({
   readonly compact: boolean;
   readonly open: boolean;
   readonly onProbe: () => void;
-  readonly onInstallDarling: () => void;
   readonly onLaunch: () => void;
   readonly onClose: () => void;
   readonly returnFocusId: string;
@@ -855,20 +663,7 @@ function InstrumentBay({
         <div className="tool-list" aria-live="polite">
           <ToolRow probe={nativeTranslator} />
           <ToolRow probe={runtime.sevenZip} />
-          <ToolRow probe={runtime.wsl} />
-          <ToolRow probe={runtime.darling} optionalFallback />
         </div>
-        {!runtime.darling.available ? (
-          <div className="runtime-install-callout">
-            <div>
-              <strong>可选 Darling 回退</strong>
-              <span>兼容引擎遇到未支持的 Darwin 能力时可选；主流程无需 WSL。</span>
-            </div>
-            <Button appearance="secondary" icon={<ArrowDownload24Regular />} onClick={onInstallDarling}>
-              一键安装回退
-            </Button>
-          </div>
-        ) : null}
       </section>
 
       <section className="instrument-section findings-section" id="findings-panel">
@@ -978,6 +773,8 @@ export function App() {
   const [launching, setLaunching] = useState(false);
   const [operationBusy, setOperationBusy] = useState(false);
   const [nativeRun, setNativeRun] = useState<NativeAppRunResult | null>(null);
+  const [engine, setEngine] = useState<'native'|'qemu'>('native');
+  const [qemuState,setQemuState] = useState<QemuState>({phase:'offline',message:'需要标准 QEMU；无需自备 Linux 镜像。',running:false});
   const operationLockRef = useRef(false);
   const [instrumentOpen, setInstrumentOpen] = useState(false);
   const viewport = useViewportMetrics();
@@ -986,13 +783,27 @@ export function App() {
   ) || viewport.heightProfile !== "tall";
   const closeInstrument = useCallback(() => setInstrumentOpen(false), []);
   const [notice, setNotice] = useState<{ readonly tone: "info" | "error" | "success"; readonly text: string } | null>(null);
-  const [darlingInstallerOpen, setDarlingInstallerOpen] = useState(false);
-  const [darlingPreparing, setDarlingPreparing] = useState(false);
-  const [darlingStarting, setDarlingStarting] = useState(false);
-  const [darlingAcceptedRisk, setDarlingAcceptedRisk] = useState(false);
-  const [darlingPlan, setDarlingPlan] = useState<DarlingInstallPlan | null>(null);
-  const [darlingProgress, setDarlingProgress] = useState<DarlingInstallProgress | null>(null);
-  const [darlingLogs, setDarlingLogs] = useState<readonly string[]>([]);
+
+  useEffect(()=>{
+    if(!api||engine!=='qemu')return;
+    let alive=true;
+    const poll=()=>void api.qemuStatus().then(next=>{if(alive)setQemuState(current=>current.phase===next.phase&&current.message===next.message&&current.running===next.running?current:next);}).catch(()=>{});
+    poll();const timer=setInterval(poll,2000);return()=>{alive=false;clearInterval(timer);};
+  },[api,engine]);
+  const runApp = useCallback(async(app:MvmAppRecord)=>{
+    if(!api)return;
+    if(engine==='qemu'){
+      setNativeRun(null);const result=await api.runQemu(app.id);
+      setNotice({tone:result.status==='blocked'?'error':'info',text:result.message});
+    }else{
+      const result=await api.runNative(app.id);setNativeRun(result);setNotice(nativeRunNotice(app,result));
+    }
+  },[api,engine]);
+  const qemuAction=useCallback(async(action:'prepare'|'stop'|'download')=>{
+    if(!api)return;
+    try{if(action==='download')await api.downloadQemu();else setQemuState(await (action==='prepare'?api.prepareQemu():api.stopQemu()));}
+    catch(error){setNotice({tone:'error',text:String(error)});}
+  },[api]);
 
   useEffect(() => {
     if (!compactInstrument) setInstrumentOpen(false);
@@ -1023,18 +834,6 @@ export function App() {
     });
   }, [api]);
 
-  useEffect(() => {
-    if (api === null) return undefined;
-    return api.onDarlingInstallProgress((next) => {
-      setDarlingProgress((current) => {
-        if (current?.phase !== next.phase) {
-          setDarlingLogs((lines) => [...lines, `[${next.phase}] ${next.label}`].slice(-200));
-        }
-        return next;
-      });
-      if (next.logLine) setDarlingLogs((lines) => [...lines, next.logLine!].slice(-200));
-    });
-  }, [api]);
 
   const filteredApps = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("zh-CN");
@@ -1056,7 +855,7 @@ export function App() {
     setNotice(null);
     setProgress({ jobId: crypto.randomUUID(), phase: "queued", progress: 0, label: "准备载入并原生直译" });
     try {
-      const result = await api.importAndRunNative(path);
+      const result = engine==='native' ? await api.importAndRunNative(path) : {importResult:await api.importPath(path)};
       setProgress(null);
       await refresh();
       if (result.importResult.canceled) return;
@@ -1064,7 +863,8 @@ export function App() {
         const importedApp = result.importResult.app;
         setSelectedId(importedApp.id);
         setStation("backend");
-        if (result.runResult) {
+        if(engine==='qemu') await runApp(importedApp);
+        else if (result.runResult) {
           setNativeRun(result.runResult);
           setNotice(nativeRunNotice(importedApp, result.runResult));
         } else {
@@ -1083,7 +883,7 @@ export function App() {
       setOperationBusy(false);
       operationLockRef.current = false;
     }
-  }, [api, refresh]);
+  }, [api, refresh, engine, runApp]);
 
   const chooseInput = useCallback(async (kind: "package" | "app-folder") => {
     if (api === null) {
@@ -1126,9 +926,7 @@ export function App() {
         await refresh();
         setSelectedId(fixture.id);
         setStation("backend");
-        const runResult = await api.runNative(fixture.id);
-        setNativeRun(runResult);
-        setNotice(nativeRunNotice(fixture, runResult));
+        await runApp(fixture);
         await refresh();
       } else if (result.error) {
         setNotice({ tone: "error", text: `${result.error.title}：${result.error.description}` });
@@ -1141,7 +939,7 @@ export function App() {
       setOperationBusy(false);
       operationLockRef.current = false;
     }
-  }, [api, refresh]);
+  }, [api, refresh, runApp]);
 
   const probeRuntime = useCallback(async () => {
     if (api === null) {
@@ -1154,87 +952,11 @@ export function App() {
       setSnapshot((current) => ({ ...current, runtime }));
       setNotice({ tone: "info", text: nativeTranslatorProbe(runtime).available
         ? "本机工具探测完成；MVM Windows 兼容引擎已就绪，无需 WSL。"
-        : "本机工具探测完成；兼容引擎器当前不可用，Darling 仍只是可选回退。" });
+        : "本机工具探测完成；自研兼容引擎当前不可用，请检查 Windows x64 环境。" });
     } finally {
       setProbing(false);
     }
   }, [api]);
-
-  const openDarlingInstaller = useCallback(async () => {
-    if (api === null) {
-      setNotice({ tone: "info", text: "Darling 安装向导只在 MVM 桌面窗口中可用。" });
-      return;
-    }
-    setDarlingInstallerOpen(true);
-    if (darlingProgress && !TERMINAL_INSTALL_PHASES.has(darlingProgress.phase)) return;
-    setDarlingPreparing(true);
-    setDarlingPlan(null);
-    setDarlingProgress(null);
-    setDarlingLogs([]);
-    setDarlingAcceptedRisk(false);
-    setDarlingStarting(false);
-    try {
-      const plan = await api.prepareDarlingInstall();
-      setDarlingPlan(plan);
-      if (!plan.canInstall) {
-        setNotice({ tone: "error", text: plan.blockers[0] ?? "当前环境不能自动安装 Darling。" });
-      }
-    } catch (error) {
-      setDarlingProgress({
-        jobId: crypto.randomUUID(),
-        phase: "failed",
-        progress: 1,
-        label: "安装预检失败",
-        detail: error instanceof Error ? error.message : "无法读取 WSL 安装能力。",
-        canCancel: false,
-      });
-    } finally {
-      setDarlingPreparing(false);
-    }
-  }, [api, darlingProgress]);
-
-  const startDarlingInstall = useCallback(async () => {
-    if (api === null || !darlingPlan?.canInstall || !darlingAcceptedRisk || darlingStarting) return;
-    setDarlingStarting(true);
-    setDarlingLogs((lines) => [...lines, "用户已确认专用发行版与 Linux root 安装边界。"]);
-    try {
-      const result = await api.installDarling({ acceptedRisk: true });
-      if (result.completed) {
-        await refresh();
-        setNotice({ tone: "success", text: result.message });
-      } else if (result.canceled) {
-        setNotice({ tone: "info", text: result.message });
-      } else if (!result.canceled) {
-        setNotice({ tone: "error", text: result.message });
-      }
-    } catch (error) {
-      setDarlingProgress((current) => ({
-        jobId: current?.jobId ?? crypto.randomUUID(),
-        phase: "failed",
-        progress: 1,
-        label: "安装未完成",
-        detail: error instanceof Error ? error.message : "Darling 安装进程异常结束。",
-        canCancel: false,
-      }));
-    } finally {
-      setDarlingStarting(false);
-    }
-  }, [api, darlingAcceptedRisk, darlingPlan, darlingStarting, refresh]);
-
-  const cancelDarlingInstall = useCallback(async () => {
-    if (api === null || darlingProgress === null) return;
-    await api.cancelDarlingInstall(darlingProgress.jobId);
-  }, [api, darlingProgress]);
-
-  const closeDarlingInstaller = useCallback(() => {
-    setDarlingInstallerOpen(false);
-    if (!darlingProgress || TERMINAL_INSTALL_PHASES.has(darlingProgress.phase)) {
-      setDarlingPlan(null);
-      setDarlingProgress(null);
-      setDarlingLogs([]);
-      setDarlingAcceptedRisk(false);
-    }
-  }, [darlingProgress]);
 
   const launchSelected = useCallback(async () => {
     if (api === null || selectedApp === null) return;
@@ -1245,9 +967,7 @@ export function App() {
     setNativeRun(null);
     setStation("backend");
     try {
-      const result = await api.runNative(selectedApp.id);
-      setNativeRun(result);
-      setNotice(nativeRunNotice(selectedApp, result));
+      await runApp(selectedApp);
       await refresh();
     } catch (error) {
       await refresh();
@@ -1257,7 +977,7 @@ export function App() {
       setOperationBusy(false);
       operationLockRef.current = false;
     }
-  }, [api, refresh, selectedApp]);
+  }, [api, refresh, selectedApp, runApp]);
 
   const removeSelected = useCallback(async () => {
     if (selectedApp === null) return;
@@ -1333,10 +1053,7 @@ export function App() {
 
           <div className="command-runtime" aria-label="运行时摘要">
             <span className={nativeTranslatorProbe(snapshot.runtime).available ? "runtime-chip is-ready" : "runtime-chip"}>
-              MVM 原生 · {nativeTranslatorProbe(snapshot.runtime).available ? "就绪" : "不可用"}
-            </span>
-            <span className={snapshot.runtime.darling.available ? "runtime-chip is-discovered" : "runtime-chip"}>
-              Darling · {snapshot.runtime.darling.available ? "可选回退已发现" : "可选回退"}
+              {engine==='qemu'?`QEMU · ${qemuState.phase==='ready'?'就绪':'待配置'}`:`MVM-CPU/2 · ${nativeTranslatorProbe(snapshot.runtime).available?'就绪':'不可用'}`}
             </span>
           </div>
 
@@ -1365,6 +1082,20 @@ export function App() {
           </Menu>
         </header>
 
+        <div className="engine-controls">
+          <section className="engine-picker" aria-label="运行方式">
+            <label htmlFor="engine-choice">运行方式</label>
+            <select id="engine-choice" value={engine} disabled={operationBusy} onChange={event=>{setEngine(event.target.value==='qemu'?'qemu':'native');setNativeRun(null);}}>
+              <option value="qemu">QEMU</option>
+              <option value="native">自研引擎（不稳定）</option>
+            </select>
+            {engine==='native'?<span>MVM-CPU/2 · 无需虚拟机</span>:<>
+              <span role="status">{qemuState.message}</span>
+              <Button size="small" onClick={()=>void qemuAction('download')}>下载 QEMU</Button>
+              <Button size="small" disabled={qemuState.running||qemuState.phase==='preparing'} onClick={()=>void qemuAction('prepare')}>准备 / 启动虚拟机</Button>
+              <Button size="small" disabled={!qemuState.running&&qemuState.phase!=='preparing'} onClick={()=>void qemuAction('stop')}>{qemuState.phase==='preparing'?'取消准备':'关闭虚拟机'}</Button>
+            </>}
+          </section>
         {notice ? (
           <div className={`app-notice app-notice--${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}>
             {notice.tone === "error" ? <Warning24Regular aria-hidden /> : notice.tone === "success" ? <CheckmarkCircle24Filled aria-hidden /> : <Info24Regular aria-hidden />}
@@ -1372,6 +1103,7 @@ export function App() {
             <Button appearance="subtle" size="small" onClick={() => setNotice(null)}>关闭</Button>
           </div>
         ) : null}
+        </div>
 
         <main className="workspace-grid">
           <AppLibrary
@@ -1419,7 +1151,6 @@ export function App() {
             compact={compactInstrument}
             open={instrumentOpen}
             onProbe={() => void probeRuntime()}
-            onInstallDarling={() => void openDarlingInstaller()}
             onLaunch={() => void launchSelected()}
             onClose={closeInstrument}
             returnFocusId="diagnostics-trigger"
@@ -1433,19 +1164,6 @@ export function App() {
 
         {dragging ? <div className="drop-overlay" role="status" aria-live="polite"><ArrowUpload24Regular aria-hidden /><strong>松开后载入并原生直译</strong><span>无需 WSL · 不会执行 PKG 脚本</span></div> : null}
       </div>
-      <DarlingInstallWizard
-        open={darlingInstallerOpen}
-        preparing={darlingPreparing}
-        starting={darlingStarting}
-        acceptedRisk={darlingAcceptedRisk}
-        plan={darlingPlan}
-        progress={darlingProgress}
-        logs={darlingLogs}
-        onAcceptedRisk={setDarlingAcceptedRisk}
-        onStart={() => void startDarlingInstall()}
-        onCancel={() => void cancelDarlingInstall()}
-        onClose={closeDarlingInstaller}
-      />
     </FluentProvider>
   );
 }

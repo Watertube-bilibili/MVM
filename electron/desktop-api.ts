@@ -224,7 +224,15 @@ export interface DarlingInstallResult {
   readonly message: string;
 }
 
+export interface QemuState { phase: 'offline'|'preparing'|'booting'|'ready'|'error'; message: string; running: boolean }
+export interface QemuRunResult { status: 'submitted'|'blocked'; message: string }
+
 export interface MvmDesktopApi {
+  qemuStatus(): Promise<QemuState>;
+  prepareQemu(): Promise<QemuState>;
+  stopQemu(): Promise<QemuState>;
+  runQemu(appId: string): Promise<QemuRunResult>;
+  downloadQemu(): Promise<void>;
   getSnapshot(): Promise<DesktopSnapshot>;
   chooseInput(kind: "package" | "app-folder"): Promise<string | null>;
   pathForFile(file: File): string;

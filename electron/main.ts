@@ -15,10 +15,12 @@ import {
 
 import { IPC, type DarlingInstallProgress, type ImportProgress } from "./desktop-api.js";
 import { MvmService } from "./mvm-service.js";
+import { QemuRuntime } from './qemu-runtime.js';
 
 const DEVELOPMENT_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 let mainWindow: BrowserWindow | null = null;
 let service: MvmService;
+let qemu: QemuRuntime;
 
 function isTrustedDevelopmentUrl(rawUrl: string): boolean {
   try {
@@ -68,6 +70,21 @@ function requireString(value: unknown, label: string): string {
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.handle('mvm:qemu-status', event=>{requireMainWindow(event);return qemu.status();});
+  ipcMain.handle('mvm:qemu-stop', event=>{requireMainWindow(event);return qemu.powerDown();});
+  ipcMain.handle('mvm:qemu-download', async event=>{requireMainWindow(event);await shell.openExternal('https://www.qemu.org/download/#windows');});
+  ipcMain.handle('mvm:qemu-prepare', async event=>{
+    const window=requireMainWindow(event);
+    if(qemu.isRunning()||qemu.status().phase==='preparing')return qemu.status();
+    const confirmation=await dialog.showMessageBox(window,{type:'question',title:'准备 QEMU + Darling',
+      message:'创建独立 Ubuntu 虚拟机并安装 Darling？',
+      detail:'不使用 WSL。将下载约 625 MB 系统镜像及额外软件，在 MVM 数据目录创建最多 32 GB 的虚拟磁盘，并使用约 4 GB 内存。首次配置可能需 20–60 分钟；只在虚拟机内部安装 Linux 软件。需要已安装的标准 Windows QEMU 和 OpenSSH。',buttons:['取消','继续'],defaultId:0,cancelId:0,noLink:true});
+    if(confirmation.response!==1)return qemu.status();
+    let executable=await qemu.configuredExecutable();
+    if(!executable){const picked=await dialog.showOpenDialog(window,{title:'选择已安装的 qemu-system-x86_64.exe',properties:['openFile'],filters:[{name:'QEMU',extensions:['exe']}]});if(picked.canceled||!picked.filePaths[0])return qemu.status();executable=picked.filePaths[0];}
+    return await qemu.prepare(executable);
+  });
+  ipcMain.handle('mvm:qemu-run',async(event,appId:unknown)=>{requireMainWindow(event);const target=await service.qemuTarget(requireString(appId,'appId'));return await qemu.run(target.bundle,target.executableName);});
   ipcMain.handle(IPC.getSnapshot, (event) => {
     requireMainWindow(event);
     return service.snapshot();
@@ -219,6 +236,9 @@ async function createMainWindow(): Promise<void> {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.on("will-redirect", (event) => event.preventDefault());
   window.on("close", (event) => {
+    if(qemu.isRunning()||qemu.status().phase==='preparing'){
+      event.preventDefault();void dialog.showMessageBox(window,{type:'info',message:'请先在 QEMU 设置中关闭虚拟机；准备镜像期间请等待当前步骤完成。',buttons:['返回'],noLink:true});return;
+    }
     if (!service.isDarlingInstallRunning()) return;
     event.preventDefault();
     void dialog.showMessageBox(window, {
@@ -270,6 +290,7 @@ if (!singleInstance) {
       },
     });
     await service.initialize();
+    qemu = new QemuRuntime(path.join(app.getPath('userData'),'qemu'),path.join(resourcesRoot(),'runtime','7zip','7z.exe'));
     registerIpcHandlers();
     service.setProgressEmitter((progress: ImportProgress) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
