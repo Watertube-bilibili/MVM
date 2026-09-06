@@ -3,11 +3,13 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 
 const CPU_TYPE_X86_64 = 0x0100_0007;
 const CPU_TYPE_ARM64 = 0x0100_000c;
+const LC_SEGMENT_64 = 0x0000_0019;
 const LC_LOAD_DYLIB = 0x0000_000c;
 const LC_RPATH = 0x8000_001c;
 const LC_CODE_SIGNATURE = 0x0000_001d;
 const LC_ENCRYPTION_INFO_64 = 0x0000_002c;
 const LC_BUILD_VERSION = 0x0000_0032;
+const LC_MAIN = 0x8000_0028;
 
 function align(value: number, multiple: number): number {
   return Math.ceil(value / multiple) * multiple;
@@ -44,6 +46,17 @@ function dylibCommand(dylibPath: string): Buffer {
 function makeThinMachO(architecture: "x86_64" | "arm64"): Buffer {
   const commands: Buffer[] = [];
 
+  const textSegment = fixedCommand(LC_SEGMENT_64, 72);
+  textSegment.write("__TEXT", 8, "ascii");
+  textSegment.writeBigUInt64LE(0x1_0000_0000n, 24);
+  textSegment.writeBigUInt64LE(0n, 40);
+  textSegment.writeInt32LE(5, 56);
+  textSegment.writeInt32LE(5, 60);
+  commands.push(textSegment);
+
+  const entryPoint = fixedCommand(LC_MAIN, 24);
+  commands.push(entryPoint);
+
   const buildVersion = fixedCommand(LC_BUILD_VERSION, 24);
   buildVersion.writeUInt32LE(1, 8);
   buildVersion.writeUInt32LE(packedVersion(13, 0, 0), 12);
@@ -66,12 +79,31 @@ function makeThinMachO(architecture: "x86_64" | "arm64"): Buffer {
   commands.push(encryption);
 
   const commandBytes = commands.reduce((sum, command) => sum + command.byteLength, 0);
-  const payloadOffset = 32 + commandBytes;
+  const entryOffset = 32 + commandBytes;
+  const executableCode = architecture === "x86_64"
+    ? Buffer.from([
+        0x55,                         // push rbp
+        0x48, 0x89, 0xe5,             // mov rbp, rsp
+        0xb8, 0x28, 0x00, 0x00, 0x00, // mov eax, 40
+        0x83, 0xc0, 0x02,             // add eax, 2
+        0x5d,                         // pop rbp
+        0xc3,                         // ret
+      ])
+    : Buffer.from([
+        0x00, 0x00, 0x80, 0xd2, // mov x0, #0
+        0xc0, 0x03, 0x5f, 0xd6, // ret
+      ]);
+  const payloadOffset = entryOffset + executableCode.byteLength;
   const payload = Buffer.from([0xfa, 0xde, 0x0c, 0xc0, 0, 0, 0, 0]);
   signature.writeUInt32LE(payloadOffset, 8);
   signature.writeUInt32LE(4, 12);
   encryption.writeUInt32LE(payloadOffset + 4, 8);
   encryption.writeUInt32LE(4, 12);
+  entryPoint.writeBigUInt64LE(BigInt(entryOffset), 8);
+
+  const fileSize = payloadOffset + payload.byteLength;
+  textSegment.writeBigUInt64LE(BigInt(align(fileSize, 0x1000)), 32);
+  textSegment.writeBigUInt64LE(BigInt(fileSize), 48);
 
   const header = Buffer.alloc(32);
   header.writeUInt32LE(0xfeed_facf, 0);
@@ -83,7 +115,7 @@ function makeThinMachO(architecture: "x86_64" | "arm64"): Buffer {
   header.writeUInt32LE(0x0020_0085, 24);
   header.writeUInt32LE(0, 28);
 
-  return Buffer.concat([header, ...commands, payload]);
+  return Buffer.concat([header, ...commands, executableCode, payload]);
 }
 
 function makeUniversalMachO(): Buffer {

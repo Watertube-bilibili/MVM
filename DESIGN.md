@@ -1,6 +1,6 @@
 ---
 name: "MVM Compatibility Laboratory"
-description: "A Windows-first inspection workbench that makes macOS package evidence, constraints, and experimental launch eligibility visible."
+description: "A Windows-first inspection and micro-translation workbench that exposes package evidence, MVM-IR/1 outcomes, and optional fallback-runtime evidence without conflating them."
 colors:
   shell-background: "#e8eef0"
   surface: "#f7f9fa"
@@ -112,6 +112,11 @@ components:
     textColor: "{colors.accent-strong}"
     rounded: "{rounded.pill}"
     padding: "5px 9px"
+  native-result-chip:
+    backgroundColor: "{colors.success-soft}"
+    textColor: "{colors.success}"
+    rounded: "{rounded.pill}"
+    padding: "5px 9px"
   panel:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
@@ -136,19 +141,19 @@ components:
 
 Direction 4, seed `93f54be6`, is the approved world. The approved “Inspection Runway” comp is directional authority, and the implemented finish verdict is `ACCEPT / DELIVERABLE`. The durable idea is a cool, Windows-native instrument surface: a compact command bar, an application library, a four-station evidence runway, a findings bay, and a chronological evidence strip. Preserve the world and its mechanism, not the comp’s exact pixels.
 
-MVM is a Windows 10/11 x64 Electron desktop application for importing and statically inspecting macOS application packages, then exposing an experimental launch entry only when a real external backend and current evidence permit it. It is not a hosted website, a macOS emulator, a universal compatibility promise, or proof that a submitted process displayed a window or worked correctly. Product copy must keep analysis, eligibility, backend health, command submission, process creation, GUI appearance, and functional verification as separate conclusions.
+MVM is a Windows 10/11 x64 Electron desktop application for importing and inspecting macOS application packages, then automatically trying an original no-WSL x86_64 Mach-O → MVM-IR/1 → bounded-interpreter path. Darling/WSL2 remains an optional fallback. MVM is not a hosted website, a macOS emulator, a universal compatibility promise, or proof that a GUI appeared or worked correctly. Product copy must keep analysis, IR translation, `completed` (entry reached `RET`), unsupported/blocked outcomes, optional-backend health, command submission, process creation, GUI appearance, and functional verification as separate conclusions.
 
 The visual system is calm, engineering-led, and evidence-first: snow and mist surfaces, graphite text, etched seams, restrained teal-blue signals, specimen labels, small mono evidence, and familiar Fluent controls. Density is compact but not cramped. CSS geometry and vector icons carry the world; the approved raster comp remains a design reference and is never shipped as interface content.
 
 **Key Characteristics:**
 
 - Windows-first laboratory tooling, never macOS chrome or terminal cosplay.
-- One horizontal inspection story: package, architecture, frameworks, then backend.
+- One horizontal inspection story: package, architecture, frameworks, then native/fallback backend evidence.
 - Measured surfaces, thin seams, compact labels, and restrained depth instead of decorative cards.
 - Evidence states expressed with text, icon, structure, and color together.
 - No runtime raster imagery, Apple mark, third-party logo, or rasterized control/text.
 
-**The Product Truth Rule.** Never compress static analysis, “candidate” eligibility, Darling discovery, health verification, command submission, process creation, window appearance, and functional success into one status.
+**The Product Truth Rule.** Never compress static analysis, MVM-IR/1 translation, `completed`, Darling discovery, health verification, command submission, process creation, window appearance, and functional success into one status. `completed` means only that the selected entry reached `RET` within budget.
 
 ## Colors
 
@@ -202,29 +207,30 @@ The palette is a cold laboratory neutral system with a sparse teal-blue interact
 
 ## Layout
 
-The application shell is full-height and Windows-first. The command bar is 68px high; an optional notice row sits below it; the remaining space is a compact workbench. The base rhythm clusters around 6–18px, with 10px workspace gutters and 14–18px panel insets. The center workbench retains a faint 36px advisory grid, while the empty-state specimen uses a 24px internal grid.
+The application shell owns exactly `100dvh` and is Windows-first. Its command bar flows between 60px and 68px; an optional notice row sits below it; the remaining space belongs to panes with explicit scroll ownership. Workspace padding, gaps, side rails, the event strip, and panel insets use `clamp()` rather than a single reference-size value. The center workbench retains a faint 36px advisory grid, while the empty-state specimen uses a 24px internal grid.
 
-### Desktop (above 1180px)
+The shell emits live `data-layout`, `data-height`, `data-pointer`, and `data-instrument` attributes from one request-animation-frame-throttled ResizeObserver model. The visible measurement output reports the current CSS viewport (`1280×720`), named layout, and DPR-derived zoom. It is measurement evidence, not a settings control, and is deliberately not `aria-live` during resize.
 
-- The workspace is a three-column grid: 236px application library, a flexible center with a 530px minimum, and a 306px instrument bay.
-- A 154px event strip spans the center and right columns; the application library spans both rows.
-- The four runway stations use evidence-weighted proportions of `1.42fr / 0.82fr / 1fr / 0.72fr`, so package evidence receives the largest specimen area.
+### Shell width profiles
 
-### Compact instrument (`<1180px`)
+- **Micro (`<440px`)**: icon-first command bar, 82px horizontal application scroller, compact event evidence, a full-workspace diagnostics dialog, single-column details, and an icon-only import action. The supported test floor is `360×480` CSS pixels.
+- **Compact (`440–679px`)**: horizontal application scroller, single-column workspace, compact event strip, and a right/full-workspace diagnostic overlay depending on available height.
+- **Focused (`680–979px`)**: 84px application rail with a visible truncated name plus a stable accessible label for every record. Search and secondary library copy are hidden.
+- **Standard (`980–1359px`)**: full 218–276px application library, wide center workbench, and diagnostics in a workspace-relative overlay so notices never cover its top edge.
+- **Wide (`1360–2199px`)**: when height is at least 760px, use a three-column laboratory grid with fluid 218–276px library and 294–380px instrument bay. At shorter heights, keep the instrument bay in its overlay state.
+- **Ultrawide (`>=2200px`)**: keep the wide composition but cap the complete workspace at 2240px and center it; the center evidence track does not stretch indefinitely on 4K or 3440px displays.
 
-- Hide the command-bar runtime summary, reduce the library to 218px, and keep the center workbench plus 154px event strip.
-- Convert the instrument bay into a fixed right drawer, no wider than 380px, with a scrim. The runway proportions tighten to `1.34fr / 0.84fr / 0.96fr / 0.72fr`.
+### Height profiles
 
-### Compact runway (`<920px`)
+- **Short (`<560px`)**: a 60px command bar, compact runway tabs, an 82px event band, and diagnostics forced into an overlay. No persistent side bay may consume the reduced evidence height.
+- **Regular (`560–759px`)**: retain the normal command height but keep diagnostics in an overlay and use the fluid event-strip height.
+- **Tall (`>=760px`)**: permits the persistent instrument bay only when the width is also Wide or Ultrawide.
 
-- Collapse the application library to an 84px icon rail and hide its search, descriptions, fixture tag, and footer copy.
-- Turn the runway into four equal compact tabs. Hide the index circles, connectors, station summaries, specimen card, chips, and backend symbol; keep the active stage detail below.
-- Stage evidence becomes two columns, with architecture rows reflowing beneath the architecture label. Command labels and the brand subtitle disappear, while recognizable icons and the MVM name remain.
+### Workbench container profiles
 
-### Single column (`<640px`)
+The runway responds to the actual `.workspace-main` inline size, not only the window. Below 760px it becomes four equal semantic tabs and hides the specimen card, connectors, deep station values, and backend symbol. Detail evidence uses two columns below 1000px and one column below 560px. The import skeleton follows the detail container: two columns below 1000px and one column below 560px, so it is never cropped in a small window.
 
-- Stack a 112px horizontal application scroller, the workbench, and the event strip in one column. Keep only the diagnostics control from the command navigation cluster.
-- Stack event headings and stage evidence; use 8px runway/detail side margins. The instrument bay remains the modal drawer inherited from the 1180px rule.
+The event row becomes a two-line structure below 440px rather than requiring horizontal scrolling. Core actions remain reachable at every profile: export is duplicated into the More menu, collapsed library records retain visible names and accessible labels, and coarse-pointer controls maintain a 44px target floor.
 
 **The Measurement Surface Rule.** Preserve the advisory grids, ruler ticks, runway baseline, and etched connectors because MVM is a measurement surface for evidence; they provide scale and process continuity, but never encode status or become high-contrast decoration.
 
@@ -258,7 +264,7 @@ Default dividers are one-pixel mist seams. Strong seams, dashed outlines, dotted
 ### Buttons
 
 - **Shape:** Fluent compact controls (4px), with 14px/20px medium typography or 16px/22px large typography.
-- **Primary:** Fluent command blue with white text; large icon buttons use 7px vertical and 16px horizontal padding. Reserve for import and an evidence-enabled launch attempt.
+- **Primary:** Fluent command blue with white text; large icon buttons use 7px vertical and 16px horizontal padding. Reserve for import, native retry, and an evidence-enabled optional fallback attempt.
 - **Secondary:** White surface, dark Fluent text, one-pixel neutral stroke, and 5px by 12px padding; use for report export and equivalent actions.
 - **Subtle:** Transparent at rest, neutral hover/pressed fills, and icon-first behavior for navigation or compact utilities.
 - **Hover / Active / Focus:** Fluent color transitions run at 100ms; custom controls use 160–180ms easing. All visible buttons receive the shared two-pixel focus outline, and reduced-motion mode collapses transitions to 0.01ms.
@@ -275,8 +281,8 @@ Default dividers are one-pixel mist seams. Strong seams, dashed outlines, dotted
 
 ### Chips
 
-- Runtime chips and launchability labels use full pills with compact text. “Darling 已发现” means the command was discovered during probing; it does not mean the Darling user state is healthy, a command has been submitted, a process exists, a GUI appeared, or the app works.
-- A `candidate` launchability label means only that current static rules and discovered WSL2/Darling evidence allow the user to try. The enabled action must still trigger Darling user-state health verification and the latest Bundle integrity/eligibility checks.
+- Runtime chips and result labels use full pills with compact text. “Windows 原生 · 无 WSL” names the active execution path; it is not a compatibility badge. `completed` must be paired with “入口到达 RET”, while `unsupported` and `blocked` must expose the first stopping reason and location.
+- “Darling 已发现” means the command was discovered during probing; it does not mean the Darling user state is healthy, a command has been submitted, a process exists, a GUI appeared, or the app works. A Darling `candidate` still triggers user-state health verification and the latest Bundle integrity/eligibility checks.
 
 ### Cards / Containers
 
@@ -286,19 +292,25 @@ Default dividers are one-pixel mist seams. Strong seams, dashed outlines, dotted
 
 ### Inspection Runway
 
-The signature component is a single tab system with four semantic workstations: **包** covers input/container safety and Bundle identity; **架构** covers Mach-O slices, minimum OS, encryption, and signature structure; **Framework** covers direct dynamic-library/system-capability dependencies; **后端** covers local-tool and WSL/Darling discoverability plus real launch evidence. Do not turn these into a compatibility score or four equal dashboard cards on desktop.
+The signature component is a single tab system with four semantic workstations: **包** covers input/container safety and Bundle identity; **架构** covers Mach-O slices, `LC_MAIN`, minimum OS, encryption, and signature structure; **Framework** covers direct dynamic-library/system-capability dependencies; **后端** leads with MVM-IR/1 translation/execution evidence and then optional WSL/Darling discovery/submission evidence. Do not turn these into a compatibility score or four equal dashboard cards on desktop.
 
 The tablist uses roving focus: only the selected tab is in the tab order; Arrow keys move cyclically, Home selects the first station, End selects the last, and focus follows selection. The tabpanel is labelled by the active tab and announces updated evidence politely.
 
 ### Structure Sample
 
-The deterministic local fixture must always carry the visible “结构样本” tag in any context where real apps also appear. It proves the local analysis pipeline against known structure; it is never third-party compatibility evidence, a launch candidate, or a success example.
+The deterministic local fixture must always carry the visible “结构样本” tag in any context where real apps also appear. Its genuine Universal 2 layout and x86_64 `LC_MAIN` program returning `42` prove the self-authored parser → MVM-IR/1 → interpreter chain against known structure. It is still never third-party compatibility, GUI, Framework, or broad success evidence.
 
 ### Compact Instrument Drawer
 
-Below 1180px, the instrument bay becomes a modal dialog with a scrim. Opening moves focus to Close; Tab and Shift+Tab stay inside; Escape and the scrim close it; closing restores focus to the diagnostics trigger. When closed it is hidden and inert. The desktop bay remains a focusable landmark rather than a modal.
+Whenever width is below 1360px or height is below 760px, the instrument bay becomes a modal dialog with a scrim, positioned inside the workspace so a variable-height notice cannot cover it. Opening moves focus to Close; Tab and Shift+Tab stay inside; Escape and the scrim close it; closing restores focus to the diagnostics trigger. When closed it is hidden and inert. Only the Wide/Ultrawide + Tall bay remains a focusable landmark rather than a modal.
 
-**The Eligibility Is Not Execution Rule.** “已发现” and `candidate` authorize only their named next check; neither is a health, launch, GUI, or compatibility success state.
+### Darling Runtime Installer
+
+The instrument bay contains only a concise “一键安装” entry. The protected task itself uses a separate Fluent modal with a 680px maximum width and a full-screen Micro/Compact composition. The plan names the dedicated `MVM-Darling` Ubuntu 24.04 WSL2 distribution, pinned upstream release, package version, byte size, SHA-256, exact steps, blockers, and root-install boundary before confirmation. The user must explicitly accept that boundary.
+
+During installation, the title, current phase, numeric progress, safe cancellation action, and fixed footer remain visible while the log scrolls independently. Download can stop immediately; package-manager cancellation is described as “stop after the current transaction,” never as an unsafe hard kill. `ready`, `CLI ready / GUI unavailable`, `canceled`, and `failed` remain separate terminal states. Installer completion never claims that an imported Mac application is compatible.
+
+**The Completion Scope Rule.** Native `completed` means “entry reached `RET` within budget,” not “process/window/app succeeded.” “已发现” and Darling `candidate` authorize only their named next check; neither is a health, launch, GUI, or compatibility success state.
 
 **The Drawer Focus Rule.** Every compact instrument drawer must trap focus while open, close on Escape, become inert when hidden, and restore focus to its trigger.
 
@@ -308,6 +320,7 @@ Below 1180px, the instrument bay becomes a modal dialog with a scrim. Opening mo
 
 - **Do** preserve direction 4, seed `93f54be6`, and the compatibility-laboratory mechanism when extending the application.
 - **Do** keep package, architecture, Framework, and backend evidence visibly separate and exportable.
+- **Do** lead the backend bay with “Windows 原生 · 无 WSL”, keep `completed`/`unsupported`/`blocked` visibly distinct, and show the stopping location when available.
 - **Do** preserve the advisory measurement grid and etched process cues at a quiet contrast.
 - **Do** label structural samples everywhere they can be mistaken for real applications.
 - **Do** pair status color with explicit Chinese text, a meaningful icon, and/or structural treatment.
@@ -318,6 +331,7 @@ Below 1180px, the instrument bay becomes a modal dialog with a scrim. Opening mo
 
 - **Don't** present “Darling 已发现” as user-state health, launch success, GUI availability, or application compatibility.
 - **Don't** present `candidate`, command submission, or process creation as proof that an application is running correctly.
+- **Don't** present native `completed` or the fixture's return value `42` as evidence that a GUI or third-party application works.
 - **Don't** use a structural sample as compatibility-rate evidence or disguise it as a real imported application.
 - **Don't** remove the measurement surface as “decoration” or inflate it into a high-contrast graph-paper theme.
 - **Don't** ship the approved raster comp, rasterized controls/text, an Apple logo, third-party marks, or photorealistic laboratory props in the interface.

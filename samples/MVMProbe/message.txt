@@ -1,0 +1,3 @@
+This text was read by the compiled Mac application from its Windows bundle directory.
+The dialog was requested through Objective-C NSAlert messages.
+Edit this file and run MVM Probe again to verify file sharing.

@@ -62,10 +62,11 @@ export interface ToolProbe {
 }
 
 export interface RuntimeSnapshot {
+  readonly nativeTranslator: ToolProbe;
   readonly sevenZip: ToolProbe;
   readonly wsl: ToolProbe;
   readonly darling: ToolProbe;
-  readonly selectedBackend: "diagnostic" | "darling-wsl";
+  readonly selectedBackend: "native-windows" | "diagnostic" | "darling-wsl";
   readonly probedAt: string;
 }
 
@@ -103,6 +104,126 @@ export interface LaunchResult {
   readonly message: string;
 }
 
+export type NativeRuntimeCode =
+  | "OK"
+  | "INPUT_INVALID"
+  | "FILE_IO_ERROR"
+  | "FILE_TOO_LARGE"
+  | "MACHO_UNSUPPORTED"
+  | "ARCHITECTURE_UNSUPPORTED"
+  | "MACHO_MALFORMED"
+  | "ENTRYPOINT_INVALID"
+  | "UNSUPPORTED_OPCODE"
+  | "FORBIDDEN_INSTRUCTION"
+  | "TRANSLATION_LIMIT"
+  | "INSTRUCTION_BUDGET_EXCEEDED"
+  | "STACK_BOUNDS"
+  | "UNBALANCED_STACK"
+  | "ADDRESS_BOUNDS"
+  | "PROGRAM_DID_NOT_RETURN"
+  | "FILE_BRIDGE_REJECTED"
+  | "APP_RECORD_NOT_FOUND"
+  | "NATIVE_RUN_BUSY"
+  | "NATIVE_RUNTIME_ERROR";
+
+export interface NativeFileMount {
+  readonly kind: "windows-directory";
+  readonly guestRoot: "/mvm/shared";
+  readonly hostRoot: string;
+  readonly readOnly: true;
+  readonly maxFileBytes: number;
+  readonly maxTotalBytes: number;
+}
+
+interface NativeAppRunBase {
+  readonly engine?: string;
+  readonly stdout?: string;
+  readonly stderr?: string;
+  readonly dialogsShown?: number;
+  readonly hostCalls?: readonly string[];
+  readonly runId: string;
+  readonly appId: string;
+  readonly backend: "native-windows-ir";
+  readonly code: NativeRuntimeCode;
+  readonly message: string;
+  readonly durationMs: number;
+  readonly selectedSliceOffset?: number;
+  readonly selectedSliceSize?: number;
+  readonly entryOffset?: number;
+  readonly entryFileOffset?: number;
+  readonly translatedInstructionCount: number;
+  readonly executedInstructionCount: number;
+  readonly mount?: NativeFileMount;
+}
+
+export type NativeAppRunResult =
+  | (NativeAppRunBase & {
+      readonly status: "completed";
+      readonly code: "OK";
+      readonly returnValue: string;
+      readonly exitCode: number;
+    })
+  | (NativeAppRunBase & {
+      readonly status: "unsupported" | "blocked";
+      readonly code: Exclude<NativeRuntimeCode, "OK">;
+      readonly returnValue?: never;
+      readonly exitCode?: never;
+    });
+
+export interface ImportAndRunNativeResult {
+  readonly importResult: ImportResult;
+  readonly runResult?: NativeAppRunResult;
+}
+
+export type DarlingInstallPhase =
+  | "idle"
+  | "preflight"
+  | "creating-distro"
+  | "downloading"
+  | "verifying"
+  | "extracting"
+  | "installing-packages"
+  | "configuring-user"
+  | "smoke-testing"
+  | "ready"
+  | "ready-cli-only"
+  | "canceling"
+  | "canceled"
+  | "failed";
+
+export interface DarlingInstallPlan {
+  readonly canInstall: boolean;
+  readonly distributionName: "MVM-Darling";
+  readonly releaseTag: string;
+  readonly packageVersion: string;
+  readonly assetUrl: string;
+  readonly assetBytes: number;
+  readonly assetSha256: string;
+  readonly requiresAdmin: boolean;
+  readonly requiresReboot: boolean;
+  readonly steps: readonly string[];
+  readonly warnings: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+export interface DarlingInstallProgress {
+  readonly jobId: string;
+  readonly phase: DarlingInstallPhase;
+  readonly progress: number;
+  readonly label: string;
+  readonly detail?: string;
+  readonly logLine?: string;
+  readonly downloadedBytes?: number;
+  readonly totalBytes?: number;
+  readonly canCancel: boolean;
+}
+
+export interface DarlingInstallResult {
+  readonly completed: boolean;
+  readonly canceled: boolean;
+  readonly message: string;
+}
+
 export interface MvmDesktopApi {
   getSnapshot(): Promise<DesktopSnapshot>;
   chooseInput(kind: "package" | "app-folder"): Promise<string | null>;
@@ -111,11 +232,17 @@ export interface MvmDesktopApi {
   createFixture(): Promise<ImportResult>;
   removeApp(appId: string): Promise<DesktopSnapshot>;
   probeRuntime(): Promise<RuntimeSnapshot>;
+  prepareDarlingInstall(): Promise<DarlingInstallPlan>;
+  installDarling(options: { readonly acceptedRisk: true }): Promise<DarlingInstallResult>;
+  cancelDarlingInstall(jobId: string): Promise<boolean>;
+  runNative(appId: string): Promise<NativeAppRunResult>;
+  importAndRunNative(path: string): Promise<ImportAndRunNativeResult>;
   launch(appId: string): Promise<LaunchResult>;
   exportReport(appId: string): Promise<boolean>;
   exportEvents(): Promise<boolean>;
   revealSource(appId: string): Promise<boolean>;
   onImportProgress(listener: (progress: ImportProgress) => void): () => void;
+  onDarlingInstallProgress(listener: (progress: DarlingInstallProgress) => void): () => void;
 }
 
 export const IPC = Object.freeze({
@@ -125,9 +252,15 @@ export const IPC = Object.freeze({
   createFixture: "mvm:create-fixture",
   removeApp: "mvm:remove-app",
   probeRuntime: "mvm:probe-runtime",
+  prepareDarlingInstall: "mvm:prepare-darling-install",
+  installDarling: "mvm:install-darling",
+  cancelDarlingInstall: "mvm:cancel-darling-install",
+  runNative: "mvm:run-native",
+  importAndRunNative: "mvm:import-and-run-native",
   launch: "mvm:launch",
   exportReport: "mvm:export-report",
   exportEvents: "mvm:export-events",
   revealSource: "mvm:reveal-source",
   importProgress: "mvm:import-progress",
+  darlingInstallProgress: "mvm:darling-install-progress",
 });

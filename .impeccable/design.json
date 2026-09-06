@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-09T06:55:41Z",
+  "generatedAt": "2026-08-11T00:00:00Z",
   "title": "Design System: MVM Compatibility Laboratory",
   "extensions": {
     "colorMeta": {
@@ -35,7 +35,7 @@
       "body": { "displayName": "Evidence Body", "purpose": "Findings, constraints, and explanatory evidence." },
       "label": { "displayName": "Instrument Label", "purpose": "Runtime chips, statuses, and compact metadata." },
       "mono": { "displayName": "Machine Evidence", "purpose": "Hashes, paths, architectures, timestamps, and evidence codes." },
-      "action-large": { "displayName": "Fluent Large Action", "purpose": "Primary import and experimental launch actions." }
+      "action-large": { "displayName": "Fluent Large Action", "purpose": "Primary import, native retry, and optional fallback actions." }
     },
     "shadows": [
       { "name": "specimen-low", "value": "0 8px 24px rgba(48, 76, 86, 0.08)", "purpose": "Package station and specimen-card separation." },
@@ -52,9 +52,15 @@
       { "name": "reduced-motion", "value": "0.01ms", "purpose": "Global transition and animation duration under prefers-reduced-motion." }
     ],
     "breakpoints": [
-      { "name": "instrument-drawer", "value": "1180px" },
-      { "name": "compact-runway", "value": "920px" },
-      { "name": "single-column", "value": "640px" }
+      { "name": "micro-shell", "value": "440px" },
+      { "name": "single-column", "value": "680px" },
+      { "name": "library-rail", "value": "980px" },
+      { "name": "instrument-docked", "value": "1360px and 760px height" },
+      { "name": "ultrawide-cap", "value": "2200px" },
+      { "name": "short-height", "value": "560px" },
+      { "name": "tall-height", "value": "760px" },
+      { "name": "workbench-compact", "value": "760px container" },
+      { "name": "workbench-single", "value": "560px container" }
     ]
   },
   "components": [
@@ -62,7 +68,7 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Fluent large primary action for import or an evidence-enabled launch attempt.",
+      "description": "Fluent large primary action for import, a native retry, or an evidence-enabled fallback attempt.",
       "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 3v12m0-12 4 4m-4-4-4 4M5 13v6h14v-6\"/></svg><span>导入应用</span></button>",
       "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:96px;padding:7px 16px;border:1px solid transparent;border-radius:4px;background:#0f6cbd;color:#fff;font:600 16px/22px 'Segoe UI',sans-serif;transition:background 100ms cubic-bezier(.33,0,.67,1),color 100ms cubic-bezier(.33,0,.67,1);cursor:pointer}.ds-btn-primary svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-btn-primary:hover{background:#115ea3}.ds-btn-primary:active{background:#0c3b5e}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#176b87);outline-offset:2px}"
     },
@@ -80,6 +86,13 @@
       "description": "Selected listbox option with a mandatory structural-sample marker when the record is a fixture.",
       "html": "<button class=\"ds-library-item\" type=\"button\" role=\"option\" aria-selected=\"true\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v18M4 7.5l8 4.5 8-4.5\"/></svg><span><strong>MVM Probe.app</strong><small>结构样本</small></span><em>结构样本</em></button>",
       "css": ".ds-library-item{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;width:236px;min-height:62px;padding:10px;border:0;border-radius:10px;background:var(--accent-soft,#deedf1);color:var(--text,#172128);box-shadow:inset 2px 0 0 var(--accent,#176b87);text-align:left;transition:background 160ms cubic-bezier(.16,1,.3,1),transform 160ms cubic-bezier(.16,1,.3,1);cursor:pointer}.ds-library-item:hover{background:#d7e9ee}.ds-library-item:active{transform:translateY(1px)}.ds-library-item:focus-visible{outline:2px solid var(--accent,#176b87);outline-offset:2px}.ds-library-item>svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.5}.ds-library-item>span{display:grid;min-width:0;gap:3px}.ds-library-item strong{font:600 13px/1.3 'Segoe UI',sans-serif}.ds-library-item small{color:var(--text-muted,#52636b);font:400 11px/1.3 'Segoe UI',sans-serif}.ds-library-item em{grid-column:2;justify-self:start;padding:3px 7px;border-radius:999px;background:#d7e9ee;color:var(--accent-strong,#0e5b75);font:700 10px/1.2 'Segoe UI',sans-serif;font-style:normal}"
+    },
+    {
+      "name": "Native Completed Chip",
+      "kind": "chip",
+      "description": "Scoped execution evidence: the selected LC_MAIN entry reached RET within the MVM-IR/1 budget; never a GUI or compatibility badge.",
+      "html": "<span class=\"ds-native-chip\">completed · 入口到达 RET</span>",
+      "css": ".ds-native-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--success-soft,#e1efe8);color:var(--success,#246b51);font:650 11px/1.3 'Segoe UI',sans-serif;white-space:nowrap}"
     },
     {
       "name": "Darling Discovered Chip",
@@ -100,16 +113,16 @@
   ],
   "narrative": {
     "northStar": "兼容性实验台 / Compatibility Laboratory",
-    "overview": "Direction 4, seed `93f54be6`, is the approved world. The approved “Inspection Runway” comp is directional authority, and the implemented finish verdict is `ACCEPT / DELIVERABLE`. The durable idea is a cool, Windows-native instrument surface: a compact command bar, an application library, a four-station evidence runway, a findings bay, and a chronological evidence strip. Preserve the world and its mechanism, not the comp’s exact pixels.\n\nMVM is a Windows 10/11 x64 Electron desktop application for importing and statically inspecting macOS application packages, then exposing an experimental launch entry only when a real external backend and current evidence permit it. It is not a hosted website, a macOS emulator, a universal compatibility promise, or proof that a submitted process displayed a window or worked correctly. Product copy must keep analysis, eligibility, backend health, command submission, process creation, GUI appearance, and functional verification as separate conclusions.\n\nThe visual system is calm, engineering-led, and evidence-first: snow and mist surfaces, graphite text, etched seams, restrained teal-blue signals, specimen labels, small mono evidence, and familiar Fluent controls. Density is compact but not cramped. CSS geometry and vector icons carry the world; the approved raster comp remains a design reference and is never shipped as interface content.",
+    "overview": "Direction 4, seed `93f54be6`, is the approved world. The approved “Inspection Runway” comp is directional authority, and the implemented finish verdict is `ACCEPT / DELIVERABLE`. The durable idea is a cool, Windows-native instrument surface: a compact command bar, an application library, a four-station evidence runway, a findings bay, and a chronological evidence strip. Preserve the world and its mechanism, not the comp’s exact pixels.\n\nMVM is a Windows 10/11 x64 Electron desktop application for importing and inspecting macOS application packages, then automatically trying an original no-WSL x86_64 Mach-O → MVM-IR/1 → bounded-interpreter path. Darling/WSL2 remains an optional fallback. MVM is not a hosted website, a macOS emulator, a universal compatibility promise, or proof that a GUI appeared or worked correctly. Product copy must keep analysis, IR translation, `completed` (entry reached `RET`), unsupported/blocked outcomes, optional-backend health, command submission, process creation, GUI appearance, and functional verification as separate conclusions.\n\nThe visual system is calm, engineering-led, and evidence-first: snow and mist surfaces, graphite text, etched seams, restrained teal-blue signals, specimen labels, small mono evidence, and familiar Fluent controls. Density is compact but not cramped. CSS geometry and vector icons carry the world; the approved raster comp remains a design reference and is never shipped as interface content.",
     "keyCharacteristics": [
       "Windows-first laboratory tooling, never macOS chrome or terminal cosplay.",
-      "One horizontal inspection story: package, architecture, frameworks, then backend.",
+      "One horizontal inspection story: package, architecture, frameworks, then native/fallback backend evidence.",
       "Measured surfaces, thin seams, compact labels, and restrained depth instead of decorative cards.",
       "Evidence states expressed with text, icon, structure, and color together.",
       "No runtime raster imagery, Apple mark, third-party logo, or rasterized control/text."
     ],
     "rules": [
-      { "name": "The Product Truth Rule", "body": "Never compress static analysis, “candidate” eligibility, Darling discovery, health verification, command submission, process creation, window appearance, and functional success into one status.", "section": "overview" },
+      { "name": "The Product Truth Rule", "body": "Never compress static analysis, MVM-IR/1 translation, `completed`, Darling discovery, health verification, command submission, process creation, window appearance, and functional success into one status. `completed` means only that the selected entry reached `RET` within budget.", "section": "overview" },
       { "name": "The One Accent Voice Rule", "body": "Laboratory teal and Fluent command blue are two implementation channels of one restrained interaction voice; never place them in decorative competition.", "section": "colors" },
       { "name": "The Evidence, Not Mood Rule", "body": "Warning, danger, and success colors may only describe a named evidence state, and the adjacent text/icon/structure must carry the same meaning without color.", "section": "colors" },
       { "name": "The Plain Evidence Type Rule", "body": "Use Segoe for human interpretation and Cascadia Mono for exact machine evidence; never use mono as a terminal aesthetic or display face.", "section": "typography" },
@@ -117,12 +130,13 @@
       { "name": "The Etched Before Elevated Rule", "body": "Establish hierarchy with tone, divider, and inset seam before adding a shadow.", "section": "elevation" },
       { "name": "The Flat-by-Default Rule", "body": "Persistent panels remain flat; medium elevation is reserved for temporary layers that sit above the workspace.", "section": "elevation" },
       { "name": "The Realized Radius Rule", "body": "Document and reuse rendered radii, not dormant declarations or a generic “rounded” preset.", "section": "shapes" },
-      { "name": "The Eligibility Is Not Execution Rule", "body": "“已发现” and `candidate` authorize only their named next check; neither is a health, launch, GUI, or compatibility success state.", "section": "components" },
+      { "name": "The Completion Scope Rule", "body": "Native `completed` means ‘entry reached `RET` within budget,’ not process, window, GUI, or compatibility success. ‘已发现’ and Darling `candidate` authorize only their named next check.", "section": "components" },
       { "name": "The Drawer Focus Rule", "body": "Every compact instrument drawer must trap focus while open, close on Escape, become inert when hidden, and restore focus to its trigger.", "section": "components" }
     ],
     "dos": [
       "Do preserve direction 4, seed `93f54be6`, and the compatibility-laboratory mechanism when extending the application.",
       "Do keep package, architecture, Framework, and backend evidence visibly separate and exportable.",
+      "Do lead the backend bay with ‘Windows 原生 · 无 WSL’, keep completed/unsupported/blocked distinct, and show the stopping location when available.",
       "Do preserve the advisory measurement grid and etched process cues at a quiet contrast.",
       "Do label structural samples everywhere they can be mistaken for real applications.",
       "Do pair status color with explicit Chinese text, a meaningful icon, and/or structural treatment.",
@@ -132,6 +146,7 @@
     "donts": [
       "Don't present “Darling 已发现” as user-state health, launch success, GUI availability, or application compatibility.",
       "Don't present `candidate`, command submission, or process creation as proof that an application is running correctly.",
+      "Don't present native `completed` or the structural fixture's return value 42 as evidence that a GUI or third-party application works.",
       "Don't use a structural sample as compatibility-rate evidence or disguise it as a real imported application.",
       "Don't remove the measurement surface as “decoration” or inflate it into a high-contrast graph-paper theme.",
       "Don't ship the approved raster comp, rasterized controls/text, an Apple logo, third-party marks, or photorealistic laboratory props in the interface.",

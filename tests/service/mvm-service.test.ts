@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 describe("MvmService integration", () => {
-  test("creates a real local structure fixture and analyzes both slices", async () => {
+  test("creates the compiler-produced default application", async () => {
     const root = await temporaryRoot();
     const service = new MvmService(path.join(root, "state"), path.resolve("resources"));
 
@@ -36,10 +36,10 @@ describe("MvmService integration", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.app?.isFixture).toBe(true);
-    expect(result.app?.architectures.map((slice) => slice.name)).toEqual(["x86_64", "arm64"]);
-    expect(result.app?.frameworks).toEqual(["AppKit", "Foundation"]);
+    expect(result.app?.architectures.map((slice) => slice.name)).toEqual(["x86_64"]);
+    expect(result.app?.frameworks).toContain("AppKit");
     expect(result.app?.findings.some((finding) => finding.code === "SOURCE_FIXTURE")).toBe(true);
-    expect(result.app?.findings.some((finding) => finding.code === "FIXTURE_NOT_LAUNCHABLE")).toBe(true);
+    expect(result.app?.findings.some((finding) => finding.code === "FIXTURE_NATIVE_PROOF")).toBe(true);
     expect(service.reportJson(result.app!.id)).toContain("io.mvm.report.v1");
   }, 30_000);
 

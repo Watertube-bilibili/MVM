@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
-import type { ImportProgress, MvmDesktopApi } from "./desktop-api.js";
+import type { DarlingInstallProgress, ImportProgress, MvmDesktopApi } from "./desktop-api.js";
 
 // A sandboxed Electron preload may only load Electron and a small set of
 // built-ins. Keep runtime channel names in this single emitted file; the type
@@ -12,11 +12,17 @@ const IPC = Object.freeze({
   createFixture: "mvm:create-fixture",
   removeApp: "mvm:remove-app",
   probeRuntime: "mvm:probe-runtime",
+  prepareDarlingInstall: "mvm:prepare-darling-install",
+  installDarling: "mvm:install-darling",
+  cancelDarlingInstall: "mvm:cancel-darling-install",
+  runNative: "mvm:run-native",
+  importAndRunNative: "mvm:import-and-run-native",
   launch: "mvm:launch",
   exportReport: "mvm:export-report",
   exportEvents: "mvm:export-events",
   revealSource: "mvm:reveal-source",
   importProgress: "mvm:import-progress",
+  darlingInstallProgress: "mvm:darling-install-progress",
 });
 
 const desktopApi: MvmDesktopApi = {
@@ -27,6 +33,11 @@ const desktopApi: MvmDesktopApi = {
   createFixture: async () => await ipcRenderer.invoke(IPC.createFixture),
   removeApp: async (appId) => await ipcRenderer.invoke(IPC.removeApp, appId),
   probeRuntime: async () => await ipcRenderer.invoke(IPC.probeRuntime),
+  prepareDarlingInstall: async () => await ipcRenderer.invoke(IPC.prepareDarlingInstall),
+  installDarling: async (options) => await ipcRenderer.invoke(IPC.installDarling, options),
+  cancelDarlingInstall: async (jobId) => await ipcRenderer.invoke(IPC.cancelDarlingInstall, jobId),
+  runNative: async (appId) => await ipcRenderer.invoke(IPC.runNative, appId),
+  importAndRunNative: async (inputPath) => await ipcRenderer.invoke(IPC.importAndRunNative, inputPath),
   launch: async (appId) => await ipcRenderer.invoke(IPC.launch, appId),
   exportReport: async (appId) => await ipcRenderer.invoke(IPC.exportReport, appId),
   exportEvents: async () => await ipcRenderer.invoke(IPC.exportEvents),
@@ -35,6 +46,11 @@ const desktopApi: MvmDesktopApi = {
     const wrapped = (_event: Electron.IpcRendererEvent, progress: ImportProgress): void => listener(progress);
     ipcRenderer.on(IPC.importProgress, wrapped);
     return () => ipcRenderer.removeListener(IPC.importProgress, wrapped);
+  },
+  onDarlingInstallProgress: (listener) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, progress: DarlingInstallProgress): void => listener(progress);
+    ipcRenderer.on(IPC.darlingInstallProgress, wrapped);
+    return () => ipcRenderer.removeListener(IPC.darlingInstallProgress, wrapped);
   },
 };
 

@@ -24,15 +24,15 @@ Windows 10/11 x64 桌面应用。界面使用 Web 技术渲染，但产品交付
 
 ## Users
 
-首代面向愿意阅读兼容性证据和日志的技术测试者、应用开发者及兼容层研究者。他们希望在 Windows 上检查合法取得的 macOS 应用包，并在具备外部实验后端时进行受控启动尝试。
+当前版本面向愿意测试早期二进制转译、阅读执行证据和日志的技术测试者、应用开发者及兼容层研究者。他们希望在 Windows 上检查合法取得的 macOS 应用包，并直接试验 MVM 自研的无 WSL 微转译路径。
 
-MVM 0.1 不以“所有 Mac 应用拖入即用”的普通消费者为目标用户，也不提供广泛兼容率承诺。
+MVM 0.2 源码候选把“拖入即自动尝试”作为交互目标，但不把当前白名单解释器包装成“所有 Mac 应用拖入即用”，也不提供广泛兼容率承诺。
 
 ## Product Purpose
 
-MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平台。首代产品完成从拖放/选择输入、包安全预检、Bundle 与 Mach-O 分析、结构化发现、应用库管理到报告/事件导出的闭环，并在真实探测到 Darling/WSL 后端时为符合条件的直接 `.app` 提供实验启动入口。
+MVM 是 Windows 上的 macOS 应用导入、静态分析与本机转译实验平台。当前产品完成从拖放/选择输入、包安全预检、Bundle 与 Mach-O 分析、结构化发现、应用库管理到报告/事件导出的闭环，并默认调用 `importAndRunNative`：选择 x86_64 slice、解析 `LC_MAIN`、翻译白名单指令为 MVM-IR/1，再由 Windows 进程内的有界解释器执行。`runNative` 提供选中记录后的重复尝试；Darling/WSL2 保留为可选回退。
 
-成功标准是：每个结论都有可复核证据，每次阻断都有明确原因，没有后端或只有静态分析时绝不伪装成运行成功。
+成功标准是：每个结论都有可复核证据，每次阻断都有明确原因，`completed` 只表示入口在预算内到达 `RET`，不伪装成窗口出现、GUI 可用或第三方应用兼容。
 
 ## Positioning
 
@@ -41,7 +41,7 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 1. **包**：输入类型、文件魔数、归档安全性和 Bundle 定位；
 2. **架构**：Mach-O slice、最低系统版本、加密和签名结构；
 3. **Framework**：直接动态库和系统能力依赖；
-4. **后端**：本机工具、WSL/Darling 可发现性和真实启动证据。
+4. **后端**：Windows 原生 MVM-IR/1 翻译/解释证据，以及可选 WSL/Darling 发现与提交证据。
 
 界面定位是“兼容性实验台”：冷静、工程化、证据优先，强调一条从输入到后端的检查跑道。状态不能只依赖颜色，结构样本与真实应用必须清晰区分。
 
@@ -51,7 +51,8 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 - 输入为 `.dmg`、`.pkg`、`.zip` 文件或直接 `.app` 目录。
 - 默认离线；没有账号、云端服务、遥测、自动上传或自动下载。
 - 安装版按用户安装，不要求提升权限；便携版无需安装，但两者都使用 Electron `userData` 目录保存本地状态。
-- 可选 Darling/WSL 由用户自行准备，MVM 不负责安装、升级或隔离该环境。
+- Windows 原生 MVM-IR/1 是默认路径，不需要 WSL、Darling、Linux VM 或管理员权限；拖放和 picker 导入成功后会自动尝试。
+- 可选 Darling/WSL 可由一键向导创建专用环境，也可由用户自行准备；它不是原生路径的前置条件。WSL2 支持 `sudo`，专用环境中的 `mvm` 账户是刻意设置为无 sudo 的运行账户。
 
 ## Capabilities and Constraints
 
@@ -65,8 +66,21 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 - 归档扩展名/魔数一致性检查、输入变化检测、路径/链接/冲突/配额防护；
 - 串行化本地持久化、完整 v1 schema 校验、无效状态隔离并持久化修复、应用记录和最近 200 条事件；
 - 失败归档导入回收本次 UUID managed copy；结构样本使用独立 `fixtures/<uuid>` 根；
+- `runNative` 与 `importAndRunNative`：严格解析 thin/fat Mach-O、选择 x86_64 slice、解析 `LC_MAIN`、把白名单 x86_64 指令翻译为 `MVM-IR/1`，并在 Windows Electron 主进程中以步数/固定栈预算解释；
+- 原生结果严格分为 `completed`、`unsupported` 和 `blocked`；不使用 JIT、`eval`、`VirtualAlloc`、`child_process`、WSL、guest syscall 或未经检查的宿主可执行内存；
+- `NativeFileBridge` 提供 Bundle 根内的路径规范化、逃逸拒绝、只读和大小上限边界；当前 guest opcode 尚不能调用该桥；
+- 内置结构样本是可执行的真实 Universal 2 fixture：x86_64 `LC_MAIN` 白名单代码通过 MVM-IR/1 返回 `42`，arm64 slice 用于结构分析；
+- 拖放/文件夹或文件 picker 在成功导入后默认自动尝试原生路径，不要求用户先审核兼容报告；格式、路径、加密、入口和执行预算保护仍失败关闭；
+- Darling 一键向导在用户明确同意后创建/修复固定的专用 `MVM-Darling` WSL2 环境；运行用户 `mvm` 刻意不授予 sudo，安装包事务由专用发行版中的 Linux root 完成；
 - 仅在用户点击探测后解析 `wsl --list --verbose`，选择确认 `VERSION 2` 的非 Docker 发行版，并以非登录 `sh -c` 发现 Darling 命令/版本，不进入 Darling shell；
 - 用户点击“尝试启动”后才要求 `darling shell uname -s → Darwin`，随后紧邻复核直接 `.app` 并提交 `darling shell open`。
+
+### Windows 原生 MVM-IR/1 边界
+
+- 当前是微转译子集，而不是完整 Mach-O/dyld/Darwin 兼容层。只支持严格 thin/fat x86_64、`LC_MAIN` 和文档列出的指令白名单；首个不支持结构/指令返回 `unsupported`。
+- `completed` 只证明选中的入口从 `LC_MAIN` 执行到 `RET` 并得到受限寄存器结果；它不证明进程语义、窗口、AppKit/Cocoa、Framework、文件 I/O 或应用功能。
+- 没有 dyld、rebase/bind/chained fixups、Darwin syscall、Objective-C runtime、AppKit/Cocoa、Metal、WebKit、XPC、Apple 服务或 GUI 桥。
+- 解释器不直接执行 guest 机器码；指令预算、调用栈预算和严格地址检查用于阻止无限循环与越界控制流，但 MVM 仍不是恶意输入沙箱。
 
 ### 直接 `.app` 边界
 
@@ -80,7 +94,7 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 
 - DMG/PKG/ZIP 先复制到本地数据目录，再完整列举和预检。
 - 当前只物化一个直接可见 `.app` 的 Info.plist 与主程序，不重建资源树、Framework、链接、权限或完整 Bundle。
-- 所有归档导入都标记 `ARCHIVE_STATIC_IMPORT_ONLY` 阻断，不能交给后端。
+- 归档中的最小主程序会自动尝试原生 MVM-IR/1，不再是永远 static-only；但它不能代表完整 Bundle，Darling 回退仍不接收该最小副本。
 - 当前不递归展开 PKG Payload 安装语义；只在 Payload 中存在的应用可能无法发现。
 - 绝不执行 `preinstall`、`postinstall` 或任何包内安装脚本。
 
@@ -90,10 +104,10 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 - 不解密受保护 Mach-O，不绕过 DRM、收据、签名、许可或 Apple 服务认证；
 - 不验证 Apple 信任链/notarization，不把签名结构存在写成签名有效；
 - 不把 CPU slice 匹配写成 Darwin/Cocoa/Metal/XPC 兼容；
-- 不验证 WSLg/X11/窗口转发或复杂图形栈；Darling 最小用户态健康通过不等于 GUI 可用；
-- 不创建隔离或一次性 Darling prefix；用户自备的 Darling 环境不是安全沙箱；
-- 不提供 macOS 虚拟机或远程 Mac 后端；架构文档中的这些内容属于后续方向，不是 0.1 功能；
-- 不宣称广泛兼容、Windows 原生执行或 Apple/Darling/7-Zip 官方认证。
+- 原生路径不提供窗口投射、AppKit/Cocoa 或复杂图形栈；Darling 的 WSLg/X11 探测与最小用户态健康通过也不等于 GUI 可用；
+- Darling 一键向导创建专用发行版、无 sudo 运行用户和固定 Prefix，但不是每应用一次性 Prefix，也不是安全沙箱；用户自备环境同样不是隔离边界；
+- 不提供 macOS 虚拟机或远程 Mac 后端；架构文档中的这些内容属于后续方向，不是当前 0.2 源码候选功能；
+- 不把 MVM-IR/1 的入口解释完成宣称为广泛兼容、GUI 成功、完整 Windows 原生应用执行或 Apple/Darling/7-Zip 官方认证。
 
 ### 数据与清理边界
 
@@ -106,20 +120,20 @@ MVM 是 Windows 上的 macOS 应用导入、静态分析和运行后端实验平
 
 名称已确认：MVM。
 
-语气：直接、可信、工程化、有节制。允许说“已完成静态分析”“识别到 x86_64 slice”“Darling 用户态健康检查通过”“启动命令已发送”；禁止把这些分别改写成“完全兼容”“Apple 签名有效”“GUI 已兼容”“应用已正常运行”。
+语气：直接、可信、工程化、有节制。允许说“已完成静态分析”“识别到 x86_64 slice”“MVM-IR/1 `completed`（入口到达 RET）”“Darling 用户态健康检查通过”“启动命令已发送”；禁止把这些分别改写成“完全兼容”“Apple 签名有效”“GUI 已兼容”“应用已正常运行”。
 
 ## Evidence on Hand
 
-- 有确定性本地结构样本，可验证 universal `x86_64 + arm64`、plist、AppKit/Foundation 依赖和静态流水线；样本必须始终标注，不能用作兼容率证据。
-- 当前有 4 个测试文件、29 项自动化测试，覆盖 Mach-O、魔数、plist、归档路径、7-Zip 列表、服务级 ZIP 导入、失败 managed copy 回收、全 Bundle manifest、无效状态隔离、UNC 拒绝与 WSL2 列表解析。
+- 有确定性本地结构样本，可验证真实 universal `x86_64 + arm64`、plist、AppKit/Foundation 静态证据以及 x86_64 `LC_MAIN` → MVM-IR/1 → 返回 `42` 的原生链路；样本必须始终标注，不能用作第三方兼容率证据。
+- 当前 9 个测试文件、75 项自动化测试覆盖 Mach-O/`LC_MAIN`、指令解码与 IR、预算、`completed`/`unsupported`/`blocked`、只读文件桥边界、魔数、plist、归档路径、服务级导入、拖放后自动运行、全 Bundle manifest、无效状态隔离、UNC 拒绝与可选 WSL/Darling 解析。
 - 有当前 Windows 主机的 7-Zip/WSL/Darling 探测结果，但单机探测不能外推到用户环境。
 - 目前没有足够的真实第三方应用矩阵、长期稳定性数据、性能数据、复杂 GUI 结果或客户证明。
 
 ## Product Principles
 
-1. “可尝试”只表示确认的 WSL2、Darling 命令发现和静态规则允许用户点击；真正执行前仍必须通过 Darling 用户态健康检查和最新 Bundle 复核。
-2. 默认静态、默认不执行；未知包内脚本永不运行。
-3. 分析、命令提交、进程创建、窗口出现和功能验证是相互独立的结论。
+1. 默认运行路径是 Windows 原生 MVM-IR/1；拖放/选择后自动尝试，但只对明确白名单语义执行，未知指令停止而不是猜测。
+2. 未知包内安装脚本永不运行；原生格式、路径、加密与预算边界始终保留。
+3. 静态分析、IR 翻译、入口到达 `RET`、Darling 命令提交、进程创建、窗口出现和功能验证是相互独立的结论。
 4. 诊断必须可理解、可复现、可导出。
 5. 输入格式、CPU 架构、Darwin API 与运行后端保持分层，不混为单一兼容分数。
 6. 没有真实证据时保持禁用或阻断，不用演示数据填补结论。

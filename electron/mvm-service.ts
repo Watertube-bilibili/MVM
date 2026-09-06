@@ -17,6 +17,7 @@ import {
 
 import {
   CoreErrorCode,
+  DEFAULT_MACHO_LIMITS,
   DirectAppAnalyzer,
   PlistV5Adapter,
   SevenZipListAdapter,
@@ -34,17 +35,30 @@ import {
 import type {
   AppFinding,
   ArchitectureSlice,
+  DarlingInstallPlan,
+  DarlingInstallProgress,
+  DarlingInstallResult,
   DesktopSnapshot,
+  ImportAndRunNativeResult,
   ImportPhase,
   ImportProgress,
   ImportResult,
   LaunchResult,
+  NativeAppRunResult,
   MvmAppRecord,
   MvmEvent,
   RuntimeSnapshot,
   ToolProbe,
 } from "./desktop-api.js";
+import { DARLING_DISTRIBUTION, DARLING_PREFIX, DarlingInstaller } from "./darling-installer.js";
 import { createStructureFixture } from "./fixture-builder.js";
+import {
+  type NativeRunResult,
+} from "./native-runtime/index.js";
+import { COMPATIBILITY_PROBE as NATIVE_RUNTIME_PROBE } from './compat-runtime/probe.js';
+import { runCompatibilityWorker } from './compat-runtime/broker.js';
+import type { CompatibilityResult } from './compat-runtime/index.js';
+import type { HostOptions } from './compat-runtime/host.js';
 
 interface StoredApp extends MvmAppRecord {
   readonly bundlePath: string;
@@ -69,10 +83,16 @@ interface ArchiveMaterialization {
 }
 
 const EMPTY_RUNTIME: RuntimeSnapshot = {
+  nativeTranslator: {
+    available: NATIVE_RUNTIME_PROBE.available,
+    label: NATIVE_RUNTIME_PROBE.name,
+    detail: NATIVE_RUNTIME_PROBE.detail,
+    version: NATIVE_RUNTIME_PROBE.version,
+  },
   sevenZip: { available: false, label: "7-Zip", detail: "尚未探测" },
   wsl: { available: false, label: "WSL 2", detail: "尚未探测" },
   darling: { available: false, label: "Darling", detail: "未连接实验后端" },
-  selectedBackend: "diagnostic",
+  selectedBackend: NATIVE_RUNTIME_PROBE.available ? "native-windows" : "diagnostic",
   probedAt: new Date(0).toISOString(),
 };
 
@@ -81,6 +101,9 @@ const MAX_EXECUTABLE_BYTES = 512 * 1024 * 1024;
 const MAX_PLIST_BYTES = 32 * 1024 * 1024;
 const MAX_CONTAINER_BYTES = 16 * 1024 * 1024 * 1024;
 const MAX_BUNDLE_ENTRIES = 100_000;
+const NATIVE_MAX_FILE_BYTES = 64 * 1024 * 1024;
+const NATIVE_INSTRUCTION_BUDGET = 1_000_000;
+const NATIVE_STACK_BYTES = 1024 * 1024;
 const BUNDLED_7ZIP_EXE_SHA256 = "e2ca3ec168ae9c0b4115cd4fe220145ea9b2dc4b6fc79d765e91f415b34d00de";
 const BUNDLED_7ZIP_DLL_SHA256 = "882063948d675ee41b5ae68db3e84879350ec81cf88d15b9babf2fa08e332863";
 
@@ -554,6 +577,10 @@ function isStoredEvent(value: unknown): value is MvmEvent {
 
 export class MvmService {
   private readonly analyzer = new DirectAppAnalyzer();
+  private readonly nativeAnalyzer = new DirectAppAnalyzer({
+    machoLimits: { ...DEFAULT_MACHO_LIMITS, maxFileBytes: NATIVE_MAX_FILE_BYTES },
+  });
+  private readonly darlingInstaller: DarlingInstaller;
   private readonly statePath: string;
   private readonly importsRoot: string;
   private readonly fixturesRoot: string;
@@ -564,19 +591,22 @@ export class MvmService {
   private runtime: RuntimeSnapshot = EMPTY_RUNTIME;
   private sevenZip: SevenZipInstallation | undefined;
   private darlingDistribution: string | undefined;
-  private importing = false;
+  /** Serializes imports and native execution so an imported bundle cannot be replaced mid-run. */
+  private operationInProgress = false;
   private persistenceTail: Promise<void> = Promise.resolve();
   private progressEmitter: (progress: ImportProgress) => void = () => undefined;
 
   public constructor(
     private readonly userDataPath: string,
-    resourcesRoot: string,
+    private readonly resourcesRoot: string,
+    private readonly nativeHost: HostOptions = {},
   ) {
     this.statePath = path.join(userDataPath, "mvm-state.json");
     this.importsRoot = path.join(userDataPath, "imports");
     this.fixturesRoot = path.join(userDataPath, "fixtures");
     this.bundledSevenZipPath = path.join(resourcesRoot, "runtime", "7zip", "7z.exe");
     this.bundledSevenZipDllPath = path.join(resourcesRoot, "runtime", "7zip", "7z.dll");
+    this.darlingInstaller = new DarlingInstaller({ userDataPath, resourcesRoot });
   }
 
   public async initialize(): Promise<void> {
@@ -618,6 +648,10 @@ export class MvmService {
 
   public setProgressEmitter(emitter: (progress: ImportProgress) => void): void {
     this.progressEmitter = emitter;
+  }
+
+  public setDarlingInstallProgressEmitter(emitter: (progress: DarlingInstallProgress) => void): void {
+    this.darlingInstaller.setProgressEmitter(emitter);
   }
 
   private emit(jobId: string, phase: ImportPhase, progress: number, label: string, appId?: string): void {
@@ -688,30 +722,32 @@ export class MvmService {
     if (record.isFixture) {
       launchability = "blocked";
       runtimeFindings.push({
-        code: "FIXTURE_NOT_LAUNCHABLE",
-        severity: "blocker",
-        title: "结构样本不用于启动",
-        description: "该样本只验证包结构与 Mach-O 解析链路，不包含真实应用逻辑。",
+        code: "FIXTURE_NATIVE_PROOF",
+        severity: "info",
+        title: "MVM 兼容引擎证明样本",
+        description: "该样本由 C 源码编译为 macOS x86_64 程序，执行循环和函数调用、读取资源文件并显示 NSAlert，完成后返回 42。",
       });
     } else if (staticBlocker) {
       launchability = "blocked";
+    } else if (!hasX64) {
+      launchability = "blocked";
+      runtimeFindings.push({
+        code: "NATIVE_RUNTIME_REQUIRES_X86_64",
+        severity: "blocker",
+        title: "兼容引擎需要 Intel slice",
+        description: "MVM-CPU/2 当前只能翻译 x86_64；该应用只包含 Apple Silicon 代码。",
+        action: "获取包含 x86_64 的 Universal 2 构建。",
+      });
+    } else if (this.runtime.nativeTranslator.available) {
+      launchability = "candidate";
     } else if (!this.runtime.darling.available) {
       launchability = "no-backend";
       runtimeFindings.push({
         code: "RUNTIME_BACKEND_UNAVAILABLE",
         severity: "blocker",
-        title: "需要运行后端",
-        description: "静态分析已完成，但当前没有实际执行 macOS 用户态的后端。",
-        action: "安装或连接 Darling/WSL 实验后端后重新探测。",
-      });
-    } else if (!hasX64) {
-      launchability = "blocked";
-      runtimeFindings.push({
-        code: "DARLING_REQUIRES_X86_64",
-        severity: "blocker",
-        title: "Darling 需要 Intel slice",
-        description: "当前实验后端只能尝试 x86_64 应用；该应用只包含 Apple Silicon 代码。",
-        action: "获取包含 x86_64 的 Universal 2 构建。",
+        title: "没有可用运行后端",
+        description: "MVM 兼容引擎器在此主机不可用，也没有发现可选 Darling 后端。",
+        action: "在 Windows x64 主机运行 MVM，或明确配置 Darling 回退。",
       });
     } else {
       launchability = "candidate";
@@ -850,6 +886,22 @@ export class MvmService {
     await mkdir(macOsPath, { recursive: true });
     await writeFile(path.join(contentsPath, "Info.plist"), infoBytes);
     await writeFile(path.join(macOsPath, executableName), executableBytes);
+    const additional = listing.entries.filter(entry => entry.kind === 'file' && entry.normalizedPath.startsWith(appEntryPath + '/') && entry !== infoEntry && entry !== executableEntry);
+    const total = additional.reduce((sum,entry)=>sum+entry.size,infoBytes.length+executableBytes.length);
+    if (additional.length > 2048 || total > 512*1024*1024 || additional.some(entry=>entry.size>64*1024*1024)) {
+      throw coreError(CoreErrorCode.LimitFileBytes,'materializing','Bundle exceeds the current 512 MiB / 2048-file import limit.');
+    }
+    for (let index=0;index<additional.length;index++) {
+      const entry=additional[index]!;
+      const relative=entry.normalizedPath.slice(appEntryPath.length+1);
+      const target=path.resolve(bundlePath,...relative.split('/'));
+      if(!isPathInside(bundlePath,target)) throw coreError(CoreErrorCode.AppLayoutInvalid,'materializing','Bundle member escapes its destination.');
+      const bytes=await this.extractMember(tool,archivePath,entry.toolReportedPath ?? entry.rawPath,Math.max(1,entry.size));
+      if(bytes.length!==entry.size) throw coreError(CoreErrorCode.FormatCorrupt,'materializing','Bundle member size changed during extraction.');
+      await mkdir(path.dirname(target),{recursive:true});
+      await writeFile(target,bytes,{flag:'wx'});
+      this.emit(jobId,'materializing',56+Math.floor(16*(index+1)/additional.length),`展开应用文件 ${index+1}/${additional.length}`);
+    }
     return { bundlePath, appEntryPath, listing };
   }
 
@@ -881,8 +933,8 @@ export class MvmService {
         extraFindings.push({
           code: "SOURCE_FIXTURE",
           severity: "info",
-          title: "这是结构样本",
-          description: "该记录由 MVM 本地生成，用于验证真实分析链路，不包含第三方应用内容。",
+          title: "MVM 默认测试应用",
+          description: "由 C 源码交叉编译的 macOS x86_64 应用，用于验证机器码、文件读取和 NSAlert 窗口桥接。",
         });
       }
       return makeStoredRecord(id, inputPath, bundlePath, preliminary, sourceSha256, fixture, extraFindings);
@@ -928,22 +980,26 @@ export class MvmService {
         code: "ARCHIVE_LINKS_NOT_MATERIALIZED",
         severity: "info",
         title: "链接保持只读",
-        description: "包中包含符号链接或硬链接；首代仅物化 Info.plist 与主程序，不创建这些链接。",
+        description: "包中常规文件会被解包；符号链接和硬链接不会在 Windows 上创建。",
       });
     }
     extraFindings.push({
       code: "ARCHIVE_STATIC_IMPORT_ONLY",
       severity: "blocker",
-      title: "归档导入当前仅用于静态分析",
-      description: "首代从容器中只物化 Info.plist 与主程序，不执行安装脚本，也不重建完整应用资源树。",
-      action: "如需通过实验后端尝试启动，请直接导入已展开的 .app 文件夹。",
+      title: "归档不走旧版 Darling 启动路径",
+      description: "MVM 自研引擎会尝试运行已解包的应用及常规资源。此标记仅阻止旧版 Darling 启动；安装脚本和链接不会执行或创建。",
+      action: "使用“运行应用”进入 MVM-CPU/2。",
     });
     sourceSha256 = await hashFiles([stagedInput]);
     return makeStoredRecord(id, inputPath, bundlePath, analysis, sourceSha256, false, extraFindings);
   }
 
-  private async importResolvedPath(inputPath: string, fixture: boolean): Promise<ImportResult> {
-    if (this.importing) {
+  private async importResolvedPath(
+    inputPath: string,
+    fixture: boolean,
+    operationAlreadyHeld = false,
+  ): Promise<ImportResult> {
+    if (!operationAlreadyHeld && this.operationInProgress) {
       return {
         canceled: false,
         error: {
@@ -954,7 +1010,7 @@ export class MvmService {
         },
       };
     }
-    this.importing = true;
+    if (!operationAlreadyHeld) this.operationInProgress = true;
     const jobId = randomUUID();
     const id = randomUUID();
     this.emit(jobId, "queued", 0, "准备导入");
@@ -966,14 +1022,14 @@ export class MvmService {
       const record = await this.analyzeInput(path.resolve(inputPath), id, jobId, fixture);
       this.emit(jobId, "committing", 94, "写入本地应用库");
       const previousApps = this.apps;
-      const previousEvents = this.events;
+      const previousEvents = [...this.events];
       const sourceKey = path.resolve(record.sourcePath).toLowerCase();
       const matchesSource = (item: StoredApp): boolean => record.isFixture
         ? item.isFixture
         : path.resolve(item.sourcePath).toLowerCase() === sourceKey;
       const replaced = this.apps.filter(matchesSource);
       this.apps = [record, ...this.apps.filter((item) => !matchesSource(item))];
-      this.addEvent("success", fixture ? "结构样本已生成" : "静态分析完成", `${record.displayName} 已加入本地应用库。`, record.id);
+      this.addEvent("success", fixture ? "默认测试应用已生成" : "静态分析完成", `${record.displayName} 已加入本地应用库。`, record.id);
       this.addEvent(
         record.architectures.some((slice) => slice.name === "x86_64") ? "success" : "warning",
         "Mach-O 分析完成",
@@ -1004,7 +1060,7 @@ export class MvmService {
       this.emit(jobId, unsupported ? "unsupported" : "failed", 100, finding.title);
       return { canceled: false, error: finding };
     } finally {
-      this.importing = false;
+      if (!operationAlreadyHeld) this.operationInProgress = false;
     }
   }
 
@@ -1015,16 +1071,197 @@ export class MvmService {
   public async createFixture(): Promise<ImportResult> {
     const fixtureRoot = path.join(this.fixturesRoot, randomUUID());
     const fixturePath = await createStructureFixture(fixtureRoot);
+    // The shipped default is compiler-produced. The old byte fixture remains in
+    // unit tests for malformed-container coverage, never as a GUI proof.
+    try {
+      const compiled = path.join(this.resourcesRoot,'samples','MVMProbe');
+      await copyFile(compiled,path.join(fixturePath,'Contents','MacOS','MVMProbe'));
+      await copyFile(path.join(this.resourcesRoot,'samples','Info.plist'),path.join(fixturePath,'Contents','Info.plist'));
+      await mkdir(path.join(fixturePath,'Contents','Resources'),{recursive:true});
+      await copyFile(path.join(this.resourcesRoot,'samples','message.txt'),path.join(fixturePath,'Contents','Resources','message.txt'));
+    } catch(error) {
+      await rm(fixtureRoot,{recursive:true,force:true}).catch(()=>undefined);
+      throw error;
+    }
     const result = await this.importResolvedPath(fixturePath, true);
     if (result.error) await rm(fixtureRoot, { recursive: true, force: true }).catch(() => undefined);
     return result;
+  }
+
+  private mapNativeRunResult(
+    appId: string,
+    runId: string,
+    startedAt: number,
+    result: NativeRunResult | CompatibilityResult,
+  ): NativeAppRunResult {
+    const common = {
+      runId,
+      appId,
+      backend: "native-windows-ir" as const,
+      message: result.message,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      translatedInstructionCount: result.translatedInstructionCount,
+      executedInstructionCount: result.executedInstructionCount,
+      ...('engine' in result ? {engine:result.engine,stdout:result.stdout,stderr:result.stderr,dialogsShown:result.dialogsShown,hostCalls:result.hostCalls} : {}),
+      ...(result.selectedSliceOffset === undefined ? {} : { selectedSliceOffset: result.selectedSliceOffset }),
+      ...(result.selectedSliceSize === undefined ? {} : { selectedSliceSize: result.selectedSliceSize }),
+      ...(result.entryOffset === undefined ? {} : { entryOffset: result.entryOffset }),
+      ...(result.entryFileOffset === undefined ? {} : { entryFileOffset: result.entryFileOffset }),
+      ...(result.mount === undefined ? {} : { mount: result.mount }),
+    };
+    if (result.status === "completed") {
+      return {
+        ...common,
+        status: "completed",
+        code: "OK",
+        returnValue: result.returnValue,
+        exitCode: result.exitCode,
+      };
+    }
+    return { ...common, status: result.status, code: result.code };
+  }
+
+  private nativeBlockedResult(
+    appId: string,
+    runId: string,
+    code: "APP_RECORD_NOT_FOUND" | "NATIVE_RUN_BUSY" | "NATIVE_RUNTIME_ERROR",
+    message: string,
+    startedAt = Date.now(),
+  ): NativeAppRunResult {
+    return {
+      runId,
+      appId,
+      backend: "native-windows-ir",
+      status: "blocked",
+      code,
+      message,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      translatedInstructionCount: 0,
+      executedInstructionCount: 0,
+    };
+  }
+
+  private async recordNativeTerminalEvent(record: StoredApp, result: NativeAppRunResult): Promise<void> {
+    if (result.status === "completed") {
+      this.addEvent(
+        "success",
+        "Mac 应用运行结束",
+        `${result.engine ?? 'MVM-CPU/2'}：退出码 ${result.exitCode}，执行 ${result.executedInstructionCount} 条指令，完成 ${result.dialogsShown ?? 0} 个系统对话框。${result.stdout ? '\n' + result.stdout.slice(0,3000) : ''}`,
+        record.id,
+      );
+    } else if (result.status === "unsupported") {
+      this.addEvent(
+        "warning",
+        "Windows 兼容引擎暂不支持",
+        `${result.code}: ${result.message} 未报告应用窗口已启动。`,
+        record.id,
+      );
+    } else {
+      this.addEvent(
+        "error",
+        "Windows 兼容引擎已阻止",
+        `${result.code}: ${result.message} 路径、格式或预算边界未被绕过。`,
+        record.id,
+      );
+    }
+    await this.persist().catch(() => undefined);
+  }
+
+  private async runNativeRecord(record: StoredApp, runId: string): Promise<NativeAppRunResult> {
+    const startedAt = Date.now();
+    try {
+      // This fresh structural read locates the executable and re-applies bundle
+      // containment checks. Findings are intentionally not a launch gate: the
+      // native runtime makes its own bounded format/opcode decision below.
+      const analysis = await this.nativeAnalyzer.analyze(record.bundlePath);
+      const runtimeResult = await runCompatibilityWorker(analysis.executablePath, {
+        instructionBudget: NATIVE_INSTRUCTION_BUDGET,
+        stackBytes: NATIVE_STACK_BYTES,
+        fileBridgeRoot: record.bundlePath,
+        ...this.nativeHost,
+      });
+      const result = this.mapNativeRunResult(record.id, runId, startedAt, runtimeResult);
+      await this.recordNativeTerminalEvent(record, result);
+      return result;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message.slice(0, 4_096) : "原生运行时发生未知错误。";
+      const result = this.nativeBlockedResult(record.id, runId, "NATIVE_RUNTIME_ERROR", detail, startedAt);
+      await this.recordNativeTerminalEvent(record, result);
+      return result;
+    }
+  }
+
+  public async runNative(appId: string): Promise<NativeAppRunResult> {
+    const runId = randomUUID();
+    if (this.operationInProgress) {
+      return this.nativeBlockedResult(appId, runId, "NATIVE_RUN_BUSY", "已有导入或原生转译正在进行，请稍后重试。");
+    }
+    this.operationInProgress = true;
+    try {
+      const record = this.apps.find((item) => item.id === appId);
+      if (!record) {
+        const result = this.nativeBlockedResult(appId, runId, "APP_RECORD_NOT_FOUND", "应用记录不存在。请重新导入后再试。");
+        this.addEvent("warning", "无法开始 Windows 兼容引擎", `${result.code}: ${result.message}`);
+        await this.persist().catch(() => undefined);
+        return result;
+      }
+      return await this.runNativeRecord(record, runId);
+    } finally {
+      this.operationInProgress = false;
+    }
+  }
+
+  public async importAndRunNative(inputPath: string): Promise<ImportAndRunNativeResult> {
+    if (this.operationInProgress) {
+      return {
+        importResult: {
+          canceled: false,
+          error: {
+            code: "IMPORT_IN_PROGRESS",
+            severity: "warning",
+            title: "已有操作正在进行",
+            description: "请等待当前导入或原生转译完成后重试。",
+          },
+        },
+      };
+    }
+
+    this.operationInProgress = true;
+    try {
+      const importResult = await this.importResolvedPath(inputPath, false, true);
+      if (!importResult.app) return { importResult };
+
+      // The operation gate remains held, so a same-source re-import cannot
+      // replace this exact record or discard its managed archive directory.
+      const record = this.apps.find((item) => item.id === importResult.app!.id);
+      if (!record) {
+        const runResult = this.nativeBlockedResult(
+          importResult.app.id,
+          randomUUID(),
+          "APP_RECORD_NOT_FOUND",
+          "刚导入的应用记录无法定位；没有执行其他记录。",
+        );
+        this.addEvent("error", "无法开始 Windows 兼容引擎", `${runResult.code}: ${runResult.message}`);
+        await this.persist().catch(() => undefined);
+        return {
+          importResult,
+          runResult,
+        };
+      }
+      return {
+        importResult,
+        runResult: await this.runNativeRecord(record, randomUUID()),
+      };
+    } finally {
+      this.operationInProgress = false;
+    }
   }
 
   public async removeApp(appId: string): Promise<DesktopSnapshot> {
     const record = this.apps.find((item) => item.id === appId);
     if (!record) return this.snapshot();
     const previousApps = this.apps;
-    const previousEvents = this.events;
+    const previousEvents = [...this.events];
     this.apps = this.apps.filter((item) => item.id !== appId);
     this.addEvent("info", "应用记录已移除", `${record.displayName} 的来源文件未被删除。`);
     try {
@@ -1037,21 +1274,62 @@ export class MvmService {
     return this.snapshot();
   }
 
+  public async prepareDarlingInstall(): Promise<DarlingInstallPlan> {
+    return await this.darlingInstaller.preflight();
+  }
+
+  public async installDarling(acceptedRisk: boolean): Promise<DarlingInstallResult> {
+    const result = await this.darlingInstaller.install(acceptedRisk);
+    if (result.completed) {
+      await this.probeRuntime(false);
+      this.addEvent("success", "Darling 实验后端已安装", result.message);
+    } else if (result.canceled) {
+      this.addEvent("info", "Darling 安装已停止", result.message);
+    } else {
+      this.addEvent("error", "Darling 安装未完成", result.message);
+    }
+    await this.persist().catch(() => undefined);
+    return result;
+  }
+
+  public cancelDarlingInstall(jobId: string): boolean {
+    return this.darlingInstaller.cancel(jobId);
+  }
+
+  public isDarlingInstallRunning(): boolean {
+    return this.darlingInstaller.isRunning();
+  }
+
   public async probeRuntime(persistEvent = true): Promise<RuntimeSnapshot> {
     const sevenZip = await this.probeSevenZip();
     const { wsl, darling } = await this.probeWslAndDarling();
     this.runtime = {
+      nativeTranslator: {
+        available: NATIVE_RUNTIME_PROBE.available,
+        label: NATIVE_RUNTIME_PROBE.name,
+        detail: NATIVE_RUNTIME_PROBE.detail,
+        version: NATIVE_RUNTIME_PROBE.version,
+      },
       sevenZip,
       wsl,
       darling,
-      selectedBackend: darling.available ? "darling-wsl" : "diagnostic",
+      selectedBackend: NATIVE_RUNTIME_PROBE.available
+        ? "native-windows"
+        : darling.available
+          ? "darling-wsl"
+          : "diagnostic",
       probedAt: new Date().toISOString(),
     };
     if (persistEvent) {
+      const nativeAvailable = this.runtime.nativeTranslator.available;
       this.addEvent(
-        darling.available ? "success" : "info",
+        nativeAvailable || darling.available ? "success" : "info",
         "运行能力已探测",
-        darling.available ? "Darling 命令已发现；启动时才会验证用户态并执行应用。" : "当前保持静态诊断模式。",
+        nativeAvailable
+          ? `MVM-CPU/2 Windows 兼容引擎已就绪，无需 WSL；Darling ${darling.available ? "已发现，可作为可选回退" : "未发现，不影响原生路径"}。`
+          : darling.available
+            ? "MVM 兼容引擎不可用；Darling 命令已发现，可作为实验回退。"
+            : "当前没有可用运行后端。",
       );
       await this.persist().catch(() => undefined);
     }
@@ -1091,16 +1369,25 @@ export class MvmService {
           darling: { available: false, label: "Darling", detail: "需要 WSL 2 Linux 发行版" },
         };
       }
-      const distribution = names.find((name) => name.toLowerCase().includes("ubuntu")) ?? names[0]!;
+      const managedDistributionAvailable = names.some((name) => name.toLowerCase() === DARLING_DISTRIBUTION.toLowerCase())
+        && await this.darlingInstaller.isManagedDistributionUsable();
+      const distribution = managedDistributionAvailable
+        ? DARLING_DISTRIBUTION
+        : names.find((name) => name.toLowerCase().includes("ubuntu")) ?? names[0]!;
+      const managedArgs = distribution === DARLING_DISTRIBUTION ? ["--user", "mvm"] : [];
+      const discoveryScript = distribution === DARLING_DISTRIBUTION
+        ? `export DPREFIX=${DARLING_PREFIX}; command -v darling >/dev/null 2>&1 || exit 3; darling --version 2>&1 | head -n 1`
+        : "command -v darling >/dev/null 2>&1 || exit 3; darling --version 2>&1 | head -n 1";
       const darlingResult = await runProcess(
         wslPath,
         [
           "--distribution",
           distribution,
+          ...managedArgs,
           "--exec",
           "sh",
           "-c",
-          "command -v darling >/dev/null 2>&1 || exit 3; darling --version 2>&1 | head -n 1",
+          discoveryScript,
         ],
         { cwd: this.userDataPath, timeoutMs: 15_000, maxStdoutBytes: 1024 * 1024 },
       );
@@ -1109,7 +1396,7 @@ export class MvmService {
       const darlingAvailable = darlingResult.exitCode === 0 && darlingLines.length > 0;
       this.darlingDistribution = darlingAvailable ? distribution : undefined;
       return {
-        wsl: { available: true, label: "WSL 2", detail: `${distribution} · VERSION 2` },
+        wsl: { available: true, label: "WSL 2", detail: distribution === DARLING_DISTRIBUTION ? `${distribution} · VERSION 2 · MVM 专用` : `${distribution} · VERSION 2` },
         darling: darlingAvailable
           ? { available: true, label: "Darling", detail: "命令已发现；启动时验证用户态", ...(darlingLines[0] ? { version: darlingLines[0] } : {}) }
           : { available: false, label: "Darling", detail: darlingResult.exitCode === 3 ? `${distribution} 中未安装 Darling` : "Darling 版本探测失败" },
@@ -1135,9 +1422,13 @@ export class MvmService {
     const distribution = this.darlingDistribution;
     if (!distribution) return { started: false, message: "尚未发现可用的 Darling 命令，请先探测运行能力。" };
     try {
+      const managedArgs = distribution === DARLING_DISTRIBUTION ? ["--user", "mvm"] : [];
+      const healthScript = distribution === DARLING_DISTRIBUTION
+        ? `export DPREFIX=${DARLING_PREFIX}; darling shell uname -s 2>/dev/null`
+        : "darling shell uname -s 2>/dev/null";
       const health = await runProcess(
         wslPath,
-        ["--distribution", distribution, "--exec", "sh", "-c", "darling shell uname -s 2>/dev/null"],
+        ["--distribution", distribution, ...managedArgs, "--exec", "sh", "-c", healthScript],
         { cwd: this.userDataPath, timeoutMs: 30_000, maxStdoutBytes: 1024 * 1024 },
       );
       if (health.exitCode !== 0 || decodeWindowsOutput(health.stdout).split(/\r?\n/u).at(-1)?.trim() !== "Darwin") {
@@ -1177,10 +1468,13 @@ export class MvmService {
         [
           "--distribution",
           distribution,
+          ...managedArgs,
           "--exec",
           "sh",
           "-c",
-          "bundle=$(wslpath -a -- \"$1\") && exec darling shell open \"$bundle\"",
+          distribution === DARLING_DISTRIBUTION
+            ? `export DPREFIX=${DARLING_PREFIX}; bundle=$(wslpath -a -- \"$1\") && exec darling shell open \"$bundle\"`
+            : "bundle=$(wslpath -a -- \"$1\") && exec darling shell open \"$bundle\"",
           "mvm-launch",
           record.bundlePath,
         ],

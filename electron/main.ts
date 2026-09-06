@@ -7,12 +7,13 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  screen,
   session,
   shell,
   type IpcMainInvokeEvent,
 } from "electron";
 
-import { IPC, type ImportProgress } from "./desktop-api.js";
+import { IPC, type DarlingInstallProgress, type ImportProgress } from "./desktop-api.js";
 import { MvmService } from "./mvm-service.js";
 
 const DEVELOPMENT_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
@@ -115,6 +116,39 @@ function registerIpcHandlers(): void {
     return await service.probeRuntime();
   });
 
+  ipcMain.handle(IPC.prepareDarlingInstall, async (event) => {
+    requireMainWindow(event);
+    return await service.prepareDarlingInstall();
+  });
+
+  ipcMain.handle(IPC.installDarling, async (event, options: unknown) => {
+    requireMainWindow(event);
+    if (
+      typeof options !== "object"
+      || options === null
+      || (options as { readonly acceptedRisk?: unknown }).acceptedRisk !== true
+      || Object.keys(options).some((key) => key !== "acceptedRisk")
+    ) {
+      throw new TypeError("Explicit Darling installation consent is required.");
+    }
+    return await service.installDarling(true);
+  });
+
+  ipcMain.handle(IPC.cancelDarlingInstall, (event, jobId: unknown) => {
+    requireMainWindow(event);
+    return service.cancelDarlingInstall(requireString(jobId, "jobId"));
+  });
+
+  ipcMain.handle(IPC.runNative, async (event, appId: unknown) => {
+    requireMainWindow(event);
+    return await service.runNative(requireString(appId, "appId"));
+  });
+
+  ipcMain.handle(IPC.importAndRunNative, async (event, inputPath: unknown) => {
+    requireMainWindow(event);
+    return await service.importAndRunNative(requireString(inputPath, "inputPath"));
+  });
+
   ipcMain.handle(IPC.launch, async (event, appId: unknown) => {
     requireMainWindow(event);
     return await service.launch(requireString(appId, "appId"));
@@ -157,11 +191,13 @@ function registerIpcHandlers(): void {
 }
 
 async function createMainWindow(): Promise<void> {
+  const workArea = screen.getPrimaryDisplay().workAreaSize;
   const window = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 960,
-    minHeight: 640,
+    width: Math.max(360, Math.min(1440, workArea.width - 32)),
+    height: Math.max(480, Math.min(900, workArea.height - 32)),
+    minWidth: 360,
+    minHeight: 480,
+    useContentSize: true,
     show: false,
     title: "MVM",
     icon: path.join(resourcesRoot(), "icon.ico"),
@@ -182,6 +218,19 @@ async function createMainWindow(): Promise<void> {
   window.webContents.on("will-attach-webview", (event) => event.preventDefault());
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.on("will-redirect", (event) => event.preventDefault());
+  window.on("close", (event) => {
+    if (!service.isDarlingInstallRunning()) return;
+    event.preventDefault();
+    void dialog.showMessageBox(window, {
+      type: "warning",
+      title: "Darling 安装仍在进行",
+      message: "请先在安装向导中取消，并等待当前安全步骤结束。",
+      detail: "MVM 会保护正在进行的 WSL 注册、软件包事务和用户配置，避免强行关闭后留下损坏状态。",
+      buttons: ["返回安装向导"],
+      defaultId: 0,
+      noLink: true,
+    });
+  });
   window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = null;
@@ -211,12 +260,25 @@ if (!singleInstance) {
   app.whenReady().then(async () => {
     session.defaultSession.setPermissionCheckHandler(() => false);
     session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
-    service = new MvmService(app.getPath("userData"), resourcesRoot());
+    service = new MvmService(app.getPath("userData"), resourcesRoot(), {
+      showAlert: async request => {
+        const options = { type: 'info' as const, title: 'MVM · Mac application', message: request.message, detail: request.detail, buttons: request.buttons, noLink: true };
+        const result = mainWindow && !mainWindow.isDestroyed()
+          ? await dialog.showMessageBox(mainWindow, options)
+          : await dialog.showMessageBox(options);
+        return result.response;
+      },
+    });
     await service.initialize();
     registerIpcHandlers();
     service.setProgressEmitter((progress: ImportProgress) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send(IPC.importProgress, progress);
+      }
+    });
+    service.setDarlingInstallProgressEmitter((progress: DarlingInstallProgress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC.darlingInstallProgress, progress);
       }
     });
     await createMainWindow();

@@ -28,6 +28,12 @@
   --shadow-mid: 0 18px 48px rgba(48, 76, 86, 0.13);
 }
 
+.program-output { min-width: 0; margin: 16px; padding: 16px; border: 1px solid var(--line); border-radius: var(--control-radius); background: var(--surface-raised); }
+.program-output-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.program-output-heading span, .program-output p { color: var(--text-muted); font-size: 12px; }
+.program-output pre { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: 13px; user-select: text; }
+@media (max-width: 679px) { .program-output { margin: 8px; padding: 12px; } .program-output pre { max-height: 180px; } }
+
 * {
   box-sizing: border-box;
 }
@@ -69,7 +75,8 @@ summary:focus-visible {
   position: relative;
   display: grid;
   grid-template-rows: 68px auto minmax(0, 1fr);
-  min-height: 100dvh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(232, 238, 240, 0) 112px),
@@ -78,9 +85,9 @@ summary:focus-visible {
 
 .command-bar {
   display: grid;
-  grid-template-columns: auto auto minmax(80px, 1fr) auto;
+  grid-template-columns: auto auto minmax(80px, 1fr) auto auto;
   align-items: center;
-  gap: 20px;
+  gap: clamp(8px, 1.35vw, 20px);
   min-width: 0;
   padding: 10px 16px 10px 18px;
   border-bottom: 1px solid var(--line);
@@ -156,6 +163,29 @@ summary:focus-visible {
   overflow: hidden;
 }
 
+.viewport-indicator {
+  display: grid;
+  min-width: 96px;
+  gap: 1px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  color: var(--text);
+  background: var(--surface-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.viewport-size {
+  font: 650 11px/1.25 "Cascadia Mono", Consolas, monospace;
+}
+
+.viewport-mode {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+}
+
 .runtime-chip,
 .fixture-label,
 .launchability,
@@ -168,11 +198,14 @@ summary:focus-visible {
 }
 
 .runtime-chip {
+  max-width: 230px;
+  overflow: hidden;
   padding: 5px 9px;
   color: var(--text-muted);
   background: #e5ebed;
   font-size: 11px;
   font-weight: 650;
+  text-overflow: ellipsis;
 }
 
 .runtime-chip.is-ready {
@@ -202,6 +235,11 @@ summary:focus-visible {
   color: var(--accent);
 }
 
+.app-notice > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .app-notice--error {
   background: var(--danger-soft);
 }
@@ -219,13 +257,16 @@ summary:focus-visible {
 }
 
 .workspace-grid {
+  position: relative;
   display: grid;
-  grid-template-columns: 236px minmax(530px, 1fr) 306px;
-  grid-template-rows: minmax(0, 1fr) 154px;
-  gap: 10px;
+  width: min(100%, 2240px);
+  grid-template-columns: clamp(218px, 16vw, 276px) minmax(530px, 1fr) clamp(294px, 20vw, 380px);
+  grid-template-rows: minmax(0, 1fr) clamp(128px, 17vh, 180px);
+  gap: clamp(8px, 0.8vw, 14px);
+  justify-self: center;
   min-width: 0;
   min-height: 0;
-  padding: 10px;
+  padding: clamp(8px, 0.8vw, 14px);
 }
 
 .library,
@@ -331,7 +372,7 @@ summary:focus-visible {
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: none;
 }
 
 .library-item:hover {
@@ -339,7 +380,7 @@ summary:focus-visible {
 }
 
 .library-item:active {
-  transform: translateY(1px);
+  transform: none;
 }
 
 .library-item.is-selected {
@@ -358,6 +399,10 @@ summary:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.library-item-rail-label {
+  display: none;
 }
 
 .library-item-copy strong {
@@ -394,6 +439,7 @@ summary:focus-visible {
 
 .workspace-main {
   position: relative;
+  container: workbench / inline-size;
   overflow: auto;
   background:
     linear-gradient(90deg, rgba(23, 107, 135, 0.025) 1px, transparent 1px) 0 0 / 36px 36px,
@@ -611,18 +657,7 @@ summary:focus-visible {
   width: 62%;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .skeleton {
-    background: linear-gradient(100deg, #d7e1e4 20%, #edf3f4 42%, #d7e1e4 64%);
-    background-size: 220% 100%;
-    animation: skeleton-scan 1.65s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-}
-
-@keyframes skeleton-scan {
-  from { background-position: 110% 0; }
-  to { background-position: -110% 0; }
-}
+.skeleton { background: var(--surface-pressed); animation: none; }
 
 .import-safety {
   display: flex;
@@ -736,7 +771,7 @@ summary:focus-visible {
   background: rgba(247, 249, 250, 0.34);
   text-align: left;
   cursor: pointer;
-  transition: background 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: none;
 }
 
 .station--package {
@@ -769,7 +804,7 @@ summary:focus-visible {
 }
 
 .station:active {
-  transform: translateY(1px);
+  transform: none;
 }
 
 .station.is-selected {
@@ -1041,6 +1076,14 @@ summary:focus-visible {
   gap: 22px;
 }
 
+.backend-plan > div {
+  min-width: 0;
+}
+
+.backend-plan strong {
+  overflow-wrap: anywhere;
+}
+
 .backend-plan p {
   margin: 0;
   color: var(--text-muted);
@@ -1065,6 +1108,39 @@ summary:focus-visible {
 
 .tool-list {
   padding: 0 8px 10px;
+}
+
+.runtime-install-callout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px 12px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.runtime-install-callout > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.runtime-install-callout strong {
+  font-size: 12px;
+}
+
+.runtime-install-callout span {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.runtime-install-callout button {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .tool-row {
@@ -1101,7 +1177,10 @@ summary:focus-visible {
 }
 
 .tool-copy strong {
+  overflow: hidden;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tool-copy span,
@@ -1230,6 +1309,28 @@ summary:focus-visible {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.native-run--completed strong {
+  color: var(--success);
+}
+
+.native-run--unsupported strong {
+  color: var(--warning);
+}
+
+.native-run--blocked strong {
+  color: var(--danger);
+}
+
+.native-launch-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.native-action-label--compact {
+  display: none;
 }
 
 .event-strip {
@@ -1365,20 +1466,263 @@ summary:focus-visible {
 }
 
 .drop-overlay strong {
+  max-width: min(26ch, calc(100vw - 64px));
   font-size: 22px;
+  text-align: center;
 }
 
 .drop-overlay span {
+  max-width: min(38ch, calc(100vw - 64px));
   color: var(--text-muted);
+  text-align: center;
 }
 
-@media (max-width: 1180px) {
+.darling-installer-surface {
+  width: min(680px, calc(100vw - 32px));
+  max-width: 680px;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-mid);
+}
+
+.darling-installer-body {
+  display: grid;
+  max-height: calc(100dvh - 34px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 0;
+}
+
+.darling-installer-body > :first-child {
+  padding: 20px 22px 12px;
+}
+
+.darling-installer-content {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 22px 20px;
+}
+
+.darling-installer-actions {
+  min-height: 64px;
+  margin: 0;
+  padding: 12px 22px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.installer-preparing,
+.installer-progress,
+.installer-plan {
+  display: grid;
+  gap: 16px;
+}
+
+.installer-preparing {
+  min-height: 210px;
+  align-content: center;
+}
+
+.installer-preparing span,
+.installer-progress-heading span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.installer-truth,
+.installer-progress-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.installer-truth > div,
+.installer-progress-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.installer-truth > div > strong,
+.installer-progress-heading strong {
+  font-size: 17px;
+}
+
+.installer-truth > div > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.install-eligibility {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--warning);
+  background: var(--warning-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.install-eligibility.is-ready {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.installer-spec {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+}
+
+.installer-spec > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 11px 12px;
+  background: var(--surface);
+}
+
+.installer-spec dt {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.installer-spec dd {
+  margin: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installer-spec .installer-hash {
+  grid-column: 1 / -1;
+}
+
+.installer-hash dd,
+.installer-transfer {
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.installer-steps {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.installer-warning,
+.installer-blockers,
+.installer-state {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+}
+
+.installer-warning {
+  grid-template-columns: auto minmax(0, 1fr);
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.installer-warning > div,
+.installer-state > div {
+  min-width: 0;
+}
+
+.installer-warning p,
+.installer-blockers p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.installer-blockers {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.installer-progress-heading b {
+  color: var(--accent);
+  font: 680 20px/1 "Cascadia Mono", Consolas, monospace;
+}
+
+.installer-transfer {
+  margin: -8px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.installer-state {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  color: var(--text);
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.installer-state--ready,
+.installer-state--ready-cli-only {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.installer-state--failed {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.installer-log {
+  display: grid;
+  min-height: 150px;
+  max-height: 240px;
+  align-content: start;
+  gap: 4px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #26383f;
+  border-radius: 12px;
+  color: #d9e5e8;
+  background: #172128;
+  font: 11px/1.45 "Cascadia Mono", Consolas, monospace;
+}
+
+.installer-log code {
+  overflow-wrap: anywhere;
+  color: inherit;
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.installer-log > span {
+  color: #9fb1b8;
+}
+
+@media (max-width: 1359px), (max-height: 759px) {
   .command-runtime {
     display: none;
   }
 
   .command-bar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
   .workspace-grid {
@@ -1392,9 +1736,9 @@ summary:focus-visible {
   }
 
   .instrument-bay {
-    position: fixed;
+    position: absolute;
     z-index: 70;
-    top: 78px;
+    top: 10px;
     right: 10px;
     bottom: 10px;
     display: grid;
@@ -1420,9 +1764,9 @@ summary:focus-visible {
   }
 
   .instrument-scrim {
-    position: fixed;
+    position: absolute;
     z-index: 60;
-    inset: 68px 0 0;
+    inset: 0;
     display: block;
     padding: 0;
     border: 0;
@@ -1446,9 +1790,9 @@ summary:focus-visible {
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 979px) {
   .app-shell {
-    overflow: auto;
+    overflow: hidden;
   }
 
   .brand-lockup {
@@ -1456,8 +1800,7 @@ summary:focus-visible {
   }
 
   .brand-lockup span:not(.app-mark),
-  .command-nav span,
-  .command-nav button > span:last-child {
+  .command-label {
     display: none;
   }
 
@@ -1471,6 +1814,18 @@ summary:focus-visible {
   .library-item .fixture-label,
   .library-foot span {
     display: none;
+  }
+
+  .library-item-rail-label {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 650;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .library-heading {
@@ -1583,9 +1938,9 @@ summary:focus-visible {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 679px) {
   .command-bar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 8px;
     padding-inline: 10px;
   }
@@ -1601,8 +1956,8 @@ summary:focus-visible {
 
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 112px minmax(480px, auto) auto;
-    overflow: auto;
+    grid-template-rows: 96px minmax(0, 1fr) 112px;
+    overflow: hidden;
   }
 
   .library {
@@ -1677,7 +2032,421 @@ summary:focus-visible {
   }
 
   .event-row {
-    grid-template-columns: 72px minmax(100px, 0.6fr) minmax(160px, 1fr);
+    grid-template-columns: 64px minmax(90px, 0.55fr) minmax(0, 1fr);
+  }
+
+  .darling-installer-surface {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .darling-installer-body {
+    height: 100dvh;
+    max-height: none;
+  }
+
+  .darling-installer-body > :first-child {
+    padding: 14px 14px 8px;
+  }
+
+  .darling-installer-content {
+    padding: 0 14px 14px;
+  }
+
+  .darling-installer-actions {
+    min-height: 58px;
+    padding: 8px 14px;
+  }
+
+  .installer-spec {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .installer-hash {
+    grid-column: 1 / -1;
+  }
+}
+
+@container workbench (max-width: 999px) {
+  .stage-detail-grid,
+  .backend-plan {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .backend-plan p {
+    grid-column: 1 / -1;
+  }
+
+  .slice-row {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .slice-row > span:nth-child(n + 3) {
+    grid-column: 2;
+  }
+
+  .loading-runway {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 220px;
+    overflow: auto;
+  }
+
+  .loading-station:nth-child(odd) {
+    border-left: 0;
+  }
+}
+
+@container workbench (max-width: 759px) {
+  .runway {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: auto;
+    padding: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .runway::before,
+  .station-index,
+  .station-connector,
+  .station > strong,
+  .specimen-card,
+  .station-values,
+  .backend-symbol {
+    display: none;
+  }
+
+  .station,
+  .station:first-child,
+  .station:last-child {
+    display: grid;
+    min-height: 50px;
+    margin: 0;
+    padding: 10px 6px;
+    place-items: center;
+    border: 0;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: center;
+  }
+
+  .station:first-child {
+    border-left: 0;
+  }
+
+  .station.is-selected,
+  .station--package.is-selected {
+    border-radius: 8px;
+    background: var(--accent-soft);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  .station-label {
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .workbench {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+}
+
+@container workbench (max-width: 559px) {
+  .stage-detail-grid,
+  .backend-plan,
+  .slice-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .backend-plan p,
+  .slice-row > span:nth-child(n + 3) {
+    grid-column: 1;
+  }
+
+  .loading-runway {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .loading-station {
+    min-height: 104px;
+    padding: 16px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .loading-station:first-child {
+    border-top: 0;
+  }
+}
+
+.app-shell[data-height="short"] {
+  grid-template-rows: 60px auto minmax(0, 1fr);
+}
+
+.app-shell[data-height="short"] .workspace-grid {
+  grid-template-rows: minmax(0, 1fr) 82px;
+}
+
+.app-shell[data-height="short"] .runway {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: auto;
+  padding: 5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-shell[data-height="short"] .runway::before,
+.app-shell[data-height="short"] .station-index,
+.app-shell[data-height="short"] .station-connector,
+.app-shell[data-height="short"] .station > strong,
+.app-shell[data-height="short"] .specimen-card,
+.app-shell[data-height="short"] .station-values,
+.app-shell[data-height="short"] .backend-symbol {
+  display: none;
+}
+
+.app-shell[data-height="short"] .station,
+.app-shell[data-height="short"] .station:first-child,
+.app-shell[data-height="short"] .station:last-child {
+  display: grid;
+  min-height: 44px;
+  margin: 0;
+  padding: 7px 5px;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell[data-height="short"] .station:first-child {
+  border-left: 0;
+}
+
+.app-shell[data-height="short"] .station.is-selected {
+  border-radius: 8px;
+  background: var(--accent-soft);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.app-shell[data-height="short"] .workbench {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.app-shell[data-height="short"] .instrument-bay {
+  top: 6px;
+  bottom: 6px;
+}
+
+.app-shell[data-height="short"] .compact-heading {
+  padding-block: 9px 6px;
+}
+
+.app-shell[data-height="short"] .instrument-section:first-child {
+  overflow: auto;
+}
+
+.app-shell[data-height="short"] .tool-list {
+  padding-bottom: 5px;
+}
+
+.app-shell[data-height="short"] .tool-row {
+  min-height: 39px;
+  padding-block: 3px;
+}
+
+.app-shell[data-height="short"] .tool-copy span,
+.app-shell[data-height="short"] .tool-result {
+  font-size: 10px;
+}
+
+.app-shell[data-height="short"] .runtime-install-callout {
+  margin: 0 8px 7px;
+  padding: 7px 8px;
+}
+
+.app-shell[data-height="short"] .launch-section {
+  grid-template-columns: minmax(0, 1fr) minmax(124px, 0.72fr);
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+}
+
+.app-shell[data-height="short"] .launch-copy span {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.app-shell[data-height="short"] .event-strip {
+  grid-template-columns: 112px minmax(0, 1fr);
+}
+
+.app-shell[data-height="short"] .event-strip-heading {
+  padding: 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.app-shell[data-height="short"] .event-list {
+  padding-block: 3px;
+}
+
+@media (max-width: 439px) {
+  .command-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    height: 60px;
+    padding-inline: 7px;
+  }
+
+  .brand-lockup {
+    gap: 6px;
+  }
+
+  .brand-lockup .app-mark--small {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-lockup strong {
+    font-size: 16px;
+  }
+
+  .viewport-indicator {
+    min-width: 70px;
+    padding-inline: 6px;
+  }
+
+  .viewport-mode,
+  .import-button-label {
+    display: none;
+  }
+
+  .import-button .import-menu-chevron {
+    display: none;
+  }
+
+  .native-action-label--full {
+    display: none;
+  }
+
+  .native-action-label--compact {
+    display: inline;
+  }
+
+  .workspace-grid {
+    grid-template-rows: 82px minmax(0, 1fr) 82px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .library-item {
+    width: 66px;
+    min-width: 66px;
+    height: 68px;
+    padding: 5px;
+  }
+
+  .library-item .app-mark--small {
+    width: 30px;
+    height: 30px;
+  }
+
+  .specimen-heading {
+    gap: 8px;
+  }
+
+  .specimen-identity {
+    min-width: 0;
+  }
+
+  .title-line h2 {
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stage-detail-heading {
+    display: grid;
+  }
+
+  .launchability {
+    justify-self: start;
+  }
+
+  .event-strip {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .event-row {
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 2px 8px;
+    min-height: 48px;
+  }
+
+  .event-row span {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drop-overlay {
+    inset: 66px 8px 8px;
+  }
+
+  .instrument-bay {
+    inset: 0;
+    width: auto;
+    border-radius: 0;
+  }
+
+  .runtime-install-callout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    margin-inline: 8px;
+  }
+
+  .runtime-install-callout button {
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .installer-spec {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .installer-spec .installer-hash {
+    grid-column: 1;
+  }
+
+  .installer-truth,
+  .installer-progress-heading {
+    gap: 10px;
+  }
+
+  .installer-log {
+    min-height: 110px;
+  }
+}
+
+@media (max-width: 679px) and (max-height: 559px) {
+  .app-shell[data-height="short"] .workspace-grid {
+    grid-template-rows: 82px minmax(0, 1fr) 82px;
+  }
+}
+
+@media (pointer: coarse) {
+  button,
+  summary,
+  [role="option"],
+  [role="tab"] {
+    min-height: 44px;
   }
 }
 
@@ -1690,6 +2459,15 @@ summary:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* The output is a real fourth row, not an implicit oversized grid track. */
+.workbench:has(.program-output) {
+  grid-template-rows: auto auto minmax(180px, 1fr) auto;
+}
+
+@container workbench (max-width: 759px) {
+  .workbench:has(.program-output) { grid-template-rows: auto auto auto auto; }
 }
 
 @media (forced-colors: active) {

@@ -1,6 +1,12 @@
 import type { DesktopSnapshot, MvmAppRecord, RuntimeSnapshot } from "./mvm-api";
 
 export const EMPTY_RUNTIME: RuntimeSnapshot = {
+  nativeTranslator: {
+    available: true,
+    label: "MVM Compatibility Engine",
+    detail: "Windows 进程内的 x86_64 → MVM-CPU/2 微转译实验核心",
+    version: "MVM-CPU/2",
+  },
   sevenZip: {
     available: false,
     label: "7-Zip",
@@ -16,7 +22,7 @@ export const EMPTY_RUNTIME: RuntimeSnapshot = {
     label: "Darling",
     detail: "未连接实验后端",
   },
-  selectedBackend: "diagnostic",
+  selectedBackend: "native-windows",
   probedAt: new Date(0).toISOString(),
 };
 
@@ -63,21 +69,14 @@ export const STRUCTURE_FIXTURE: MvmAppRecord = {
   frameworks: ["AppKit", "Foundation"],
   findings: [
     {
-      code: "RUNTIME_BACKEND_UNAVAILABLE",
-      severity: "blocker",
-      title: "需要运行后端",
-      description: "结构样本可以完成分析，但当前没有可执行 macOS 用户态的后端。",
-      action: "连接 Darling/WSL 实验后端后重新探测。",
-    },
-    {
       code: "SOURCE_FIXTURE",
       severity: "info",
-      title: "这是结构样本",
-      description: "该记录由 MVM 本地生成，只用于验证解析流程，不是可运行的商业应用。",
+      title: "这是可执行微转译样本",
+      description: "该记录由 MVM 本地生成；x86_64 的 LC_MAIN 会在 Windows 兼容引擎器中完成并返回 42。它不是第三方商业应用。",
     },
   ],
-  phase: "ready-with-warnings",
-  launchability: "no-backend",
+  phase: "ready",
+  launchability: "candidate",
   sourceSha256: "fixture:deterministic-macho-universal2",
 };
 
@@ -90,9 +89,9 @@ export function createDemoSnapshot(includeFixture: boolean): DesktopSnapshot {
           {
             id: "fixture-event-3",
             at: new Date().toISOString(),
-            level: "warning",
-            title: "未找到运行后端",
-            detail: "分析完成，启动保持禁用。",
+            level: "success",
+            title: "Windows 兼容引擎可用",
+            detail: "MVM-CPU/2 可执行内置 LC_MAIN 样本并返回 42；无需 WSL。",
             appId: STRUCTURE_FIXTURE.id,
           },
           {
